@@ -6,6 +6,7 @@ import {
   printerColor, printerColorSoft,
   fmtTime, fmtDuration, fmtRelativeFuture,
 } from './data.js';
+import { loadFilamentColors } from './supabase.js';
 import { Icon, Btn, StatePill } from './ui.jsx';
 
 export function PrinterCard({ printer, status, reservations, allReservations, me, onSlotClick, onReserve, onCancel, slotSize, density, dark, searchQuery, hourSpan = 24 }) {
@@ -13,6 +14,14 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
   const PIXELS_PER_HOUR = density === 'compact' ? 36 : density === 'comfy' ? 64 : 48;
   const TIMELINE_HEIGHT = HOURS * PIXELS_PER_HOUR;
   const slotOffset = getNextSlotOffset(slotSize);
+
+  const [filamentColors, setFilamentColors] = React.useState([]);
+
+  React.useEffect(() => {
+    loadFilamentColors().then(colors => {
+      setFilamentColors(colors.filter(c => c.printer_id === printer.id));
+    });
+  }, [printer.id]);
 
   const items = reservations
     .filter(r => r.printerId === printer.id)
@@ -93,6 +102,22 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
             <span style={{ fontVariantNumeric: 'tabular-nums', color: fgText, fontWeight: 500, minWidth: 28, textAlign: 'right' }}>{Math.round(load * 100)}%</span>
           </div>
         </div>
+
+        {filamentColors.length > 0 && (
+          <div style={{ marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${border}` }}>
+            <div style={{ fontSize: 10, color: subText, marginBottom: 6, fontWeight: 500 }}>Filaments disponibles</div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {filamentColors.map(color => (
+                <div key={color.id} style={{
+                  width: 20, height: 20, borderRadius: 4,
+                  background: color.hex_color,
+                  border: `1px solid ${border}`,
+                  cursor: 'default',
+                }} title={color.color_name} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Reserve CTA */}

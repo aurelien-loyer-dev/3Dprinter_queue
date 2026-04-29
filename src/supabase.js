@@ -64,7 +64,7 @@ export async function registerUser(login, password) {
 export async function loginUser(login, password) {
   const { data, error } = await supabase
     .from('qp_users')
-    .select('login, first_name, last_name, hash, salt')
+    .select('login, first_name, last_name, hash, salt, is_admin')
     .eq('login', login)
     .single();
 
@@ -73,7 +73,7 @@ export async function loginUser(login, password) {
   const ok = await verifyPassword(password, data.hash, data.salt);
   if (!ok) return { error: 'Email ou mot de passe incorrect' };
 
-  return { user: { login: data.login, firstName: data.first_name, lastName: data.last_name } };
+  return { user: { login: data.login, firstName: data.first_name, lastName: data.last_name, isAdmin: data.is_admin || false } };
 }
 
 // ── Reservations ───────────────────────────────────────────────────────────
@@ -140,4 +140,42 @@ export function subscribeToReservations(onRefresh) {
     .channel('qp-reservations-live')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'qp_reservations' }, onRefresh)
     .subscribe();
+}
+
+// ── Admin — Filament Colors ────────────────────────────────────────────────
+
+export async function loadFilamentColors() {
+  const { data, error } = await supabase
+    .from('qp_filament_colors')
+    .select('*')
+    .order('printer_id');
+  if (error) { console.error('loadFilamentColors:', error.message); return []; }
+  return data || [];
+}
+
+export async function addFilamentColor(printerId, colorName, hexColor) {
+  const id = `color-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const { error } = await supabase
+    .from('qp_filament_colors')
+    .insert({ id, printer_id: printerId, color_name: colorName, hex_color: hexColor });
+  if (error) { console.error('addFilamentColor:', error.message); return false; }
+  return true;
+}
+
+export async function deleteFilamentColor(id) {
+  const { error } = await supabase
+    .from('qp_filament_colors')
+    .delete()
+    .eq('id', id);
+  if (error) { console.error('deleteFilamentColor:', error.message); return false; }
+  return true;
+}
+
+export async function deleteReservationAdmin(id) {
+  const { error } = await supabase
+    .from('qp_reservations')
+    .delete()
+    .eq('id', id);
+  if (error) { console.error('deleteReservationAdmin:', error.message); return false; }
+  return true;
 }

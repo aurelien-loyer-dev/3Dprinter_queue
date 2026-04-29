@@ -15,6 +15,7 @@ import {
 } from './TweaksPanel.jsx';
 import { PrinterCard } from './PrinterCard.jsx';
 import { ReserveModal } from './ReserveModal.jsx';
+import { AdminPanel } from './AdminPanel.jsx';
 import {
   LoginScreen, RegisterScreen, MyReservationsPanel, PrinterDetailPanel, NotificationToast,
 } from './screens.jsx';
@@ -51,6 +52,7 @@ export default function App() {
   const [myResOpen, setMyResOpen] = React.useState(false);
   const [detailPrinterId, setDetailPrinterId] = React.useState(null);
   const [notif, setNotif] = React.useState(null);
+  const [adminPanelOpen, setAdminPanelOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (!me) return;
@@ -219,6 +221,12 @@ export default function App() {
           )}
         </Btn>
 
+        {me.isAdmin && (
+          <Btn variant="secondary" size="sm" icon="settings" onClick={() => setAdminPanelOpen(true)}>
+            Admin
+          </Btn>
+        )}
+
         <Btn variant="primary" size="sm" icon="plus" onClick={() => openReserve(null)}>Réserver</Btn>
 
         {/* User */}
@@ -339,6 +347,43 @@ export default function App() {
         onCancel={handleCancel}
         dark={t.dark}
       />
+
+      {me.isAdmin && adminPanelOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: t.dark ? '#0a0a0a' : '#fafafa',
+          display: 'flex', flexDirection: 'column',
+          animation: 'qp-overlay-fade 0.2s ease',
+        }}>
+          <div style={{
+            padding: '12px 24px', borderBottom: `0.5px solid ${t.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: t.dark ? 'rgba(10,10,10,0.75)' : 'rgba(250,250,250,0.78)',
+            backdropFilter: 'blur(24px)',
+          }}>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>Admin Panel</div>
+            <button
+              onClick={() => setAdminPanelOpen(false)}
+              style={{
+                width: 28, height: 28, borderRadius: 8, border: 'none',
+                background: t.dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)',
+                color: t.dark ? '#f5f5f7' : '#1d1d1f', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <Icon name="close" size={14} />
+            </button>
+          </div>
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            <AdminPanel
+              dark={t.dark}
+              reservations={reservations}
+              me={me}
+              onReservationDeleted={(id) => setReservations(prev => prev.filter(r => r.id !== id))}
+            />
+          </div>
+        </div>
+      )}
 
       <NotificationToast notif={notif} onClose={() => setNotif(null)} dark={t.dark} />
     </div>
