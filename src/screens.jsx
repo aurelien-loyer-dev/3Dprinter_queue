@@ -1,6 +1,6 @@
 // screens.jsx — Auth + panels
 import React from 'react';
-import { loginUser, registerUser } from './supabase.js';
+import { loginUser, registerUser, verifyOtp } from './supabase.js';
 import {
   computePrinterStatus,
   printerById, printerColor,
@@ -130,25 +130,90 @@ export function LoginScreen({ onLogin, onShowRegister, dark }) {
 // ── RegisterScreen ─────────────────────────────────────────────────────────
 
 export function RegisterScreen({ onRegister, onShowLogin, dark }) {
+  const [step, setStep] = React.useState('form'); // 'form' | 'verify'
   const [login, setLogin] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirm, setConfirm] = React.useState('');
+  const [otp, setOtp] = React.useState('');
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
   const fg = dark ? '#f5f5f7' : '#1d1d1f';
   const sub = dark ? 'rgba(255,255,255,0.55)' : 'rgba(29,29,31,0.55)';
   const border = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
+  const fieldBg = dark ? 'rgba(255,255,255,0.04)' : '#f5f5f7';
 
-  const handleSubmit = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return; }
     setLoading(true);
     const result = await registerUser(login, password);
     setLoading(false);
     if (result.error) { setError(result.error); return; }
+    if (result.pendingVerification) { setStep('verify'); return; }
     onRegister(result.user);
   };
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    if (otp.length !== 6) { setError('Le code doit faire 6 chiffres'); return; }
+    setLoading(true);
+    const result = await verifyOtp(login, otp);
+    setLoading(false);
+    if (result.error) { setError(result.error); return; }
+    onRegister(result.user);
+  };
+
+  if (step === 'verify') {
+    return (
+      <AuthCard dark={dark}>
+        <AuthBrand sub={sub} />
+        <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', margin: '0 0 6px', color: fg }}>
+          Vérifie ton mail
+        </h1>
+        <p style={{ fontSize: 13.5, color: sub, margin: '0 0 24px', lineHeight: 1.5 }}>
+          Un code à 6 chiffres a été envoyé à <strong style={{ color: fg }}>{login}</strong>. Saisis-le ci-dessous.
+        </p>
+
+        <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: sub, display: 'block', marginBottom: 10 }}>
+              Code de vérification
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoFocus
+              maxLength={6}
+              value={otp}
+              onChange={e => { setOtp(e.target.value.replace(/\D/g, '')); setError(''); }}
+              placeholder="000000"
+              style={{
+                width: '100%', height: 56, padding: '0 14px',
+                borderRadius: 12, border: `0.5px solid ${error ? 'oklch(0.6 0.18 25)' : border}`,
+                background: fieldBg, color: fg,
+                fontSize: 28, fontWeight: 700, letterSpacing: '0.3em',
+                outline: 'none', boxSizing: 'border-box', textAlign: 'center',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            />
+            {error && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)', marginTop: 8 }}>{error}</div>}
+          </div>
+          <Btn variant="primary" size="lg" full iconRight="check" disabled={loading || otp.length !== 6}>
+            {loading ? 'Vérification…' : 'Confirmer'}
+          </Btn>
+        </form>
+
+        <div style={{ marginTop: 20, paddingTop: 20, borderTop: `0.5px solid ${border}`, textAlign: 'center', fontSize: 13, color: sub }}>
+          Mauvaise adresse ?{' '}
+          <button onClick={() => { setStep('form'); setOtp(''); setError(''); }}
+            style={{ background: 'none', border: 'none', color: fg, fontWeight: 600, cursor: 'pointer', fontSize: 13, padding: 0 }}>
+            Recommencer
+          </button>
+        </div>
+      </AuthCard>
+    );
+  }
 
   return (
     <AuthCard dark={dark}>
@@ -157,19 +222,19 @@ export function RegisterScreen({ onRegister, onShowLogin, dark }) {
         Inscription
       </h1>
       <p style={{ fontSize: 13.5, color: sub, margin: '0 0 24px', lineHeight: 1.5 }}>
-        Crée ton compte avec ton adresse Epitech pour accéder à l'application.
+        Choisis ton adresse Epitech et un mot de passe. Un code sera envoyé pour vérifier ton mail.
       </p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <AuthField label="Login Epitech" value={login} onChange={e => { setLogin(e.target.value); setError(''); }}
           placeholder="prenom.nom@epitech.eu" error={!!error} autoFocus dark={dark} />
-        <AuthField label="Mot de passe" type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
+        <AuthField label="Mot de passe (tu le choisiras)" type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
           placeholder="6 caractères minimum" error={!!error} dark={dark} />
         <AuthField label="Confirmer le mot de passe" type="password" value={confirm} onChange={e => { setConfirm(e.target.value); setError(''); }}
           placeholder="••••••••" error={!!error} dark={dark} />
         {error && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)', marginTop: -6 }}>{error}</div>}
         <Btn variant="primary" size="lg" full iconRight="arrow-right" disabled={loading}>
-          {loading ? 'Création en cours…' : 'Créer mon compte'}
+          {loading ? 'Envoi du code de vérification…' : 'Créer mon compte'}
         </Btn>
       </form>
 

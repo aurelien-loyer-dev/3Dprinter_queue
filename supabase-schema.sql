@@ -1,15 +1,8 @@
--- Tek3D — à coller dans l'éditeur SQL de ton projet Supabase
+-- QueuePrint — à coller dans l'éditeur SQL de ton projet Supabase
+-- Les utilisateurs sont gérés par Supabase Auth (Authentication > Users).
+-- Pas besoin de table qp_users, les mots de passe sont gérés par Supabase.
 
-create table qp_users (
-  id         uuid default gen_random_uuid() primary key,
-  login      text unique not null,
-  first_name text not null,
-  last_name  text not null,
-  hash       text not null,
-  salt       text not null,
-  is_admin   boolean default false,
-  created_at timestamptz default now()
-);
+-- ── Réservations ─────────────────────────────────────────────────────────────
 
 create table qp_reservations (
   id           text primary key,
@@ -23,18 +16,13 @@ create table qp_reservations (
   created_at   timestamptz default now()
 );
 
--- Row Level Security : accès public (clé anon suffit)
-alter table qp_users        enable row level security;
 alter table qp_reservations enable row level security;
-
-create policy "insert users"        on qp_users        for insert with check (true);
-create policy "read users"          on qp_users        for select using (true);
-
 create policy "read reservations"   on qp_reservations for select using (true);
 create policy "insert reservations" on qp_reservations for insert with check (true);
 create policy "delete reservations" on qp_reservations for delete using (true);
 
--- Filament colors per printer
+-- ── Couleurs de filament par imprimante (admin) ───────────────────────────────
+
 create table qp_filament_colors (
   id         text primary key,
   printer_id text not null,
@@ -48,5 +36,16 @@ create policy "read filament colors"   on qp_filament_colors for select using (t
 create policy "insert filament colors" on qp_filament_colors for insert with check (true);
 create policy "delete filament colors" on qp_filament_colors for delete using (true);
 
--- Réservations passées auto-supprimées au bout de 7 jours (optionnel)
--- À activer dans Supabase > Database > Extensions : pg_cron
+
+-- ── Configuration Supabase Auth requise ──────────────────────────────────────
+-- 1. Authentication > Settings :
+--    - "Enable email confirmations" : ON
+--    - "Email OTP Expiry" : 600 (10 min)
+--
+-- 2. Authentication > Email Templates > "Confirm signup" :
+--    Remplace le body par quelque chose contenant : {{ .Token }}
+--    Exemple :
+--      Ton code de vérification QueuePrint : <strong>{{ .Token }}</strong>
+--
+-- 3. Authentication > URL Configuration :
+--    Site URL : http://localhost:5173 (dev) ou ton domaine de prod

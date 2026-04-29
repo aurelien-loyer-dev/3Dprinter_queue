@@ -7,6 +7,7 @@ import {
   fmtTime, fmtDuration, fmtRelativeFuture,
 } from './data.js';
 import {
+  getSessionUser, onAuthChange, logoutUser,
   loadReservations, addReservation, deleteReservation, subscribeToReservations,
 } from './supabase.js';
 import { Icon, Avatar, Btn, GlobalAnims, StatePill } from './ui.jsx';
@@ -28,40 +29,14 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "hourSpan": 24
 }/*EDITMODE-END*/;
 
-const AUTH_STORAGE_KEY = 'tek3d.authUser';
-
-function readStoredUser() {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed?.login || !parsed?.firstName || !parsed?.lastName) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [me, setMe] = React.useState(() => readStoredUser());
+  const [me, setMe] = React.useState(null);
+  const [authLoading, setAuthLoading] = React.useState(true);
   const [authScreen, setAuthScreen] = React.useState('login');
   const [reservations, setReservations] = React.useState([]);
   const [loadingReservations, setLoadingReservations] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState('');
-
-  // Chargement initial + abonnement realtime
-  React.useEffect(() => {
-    loadReservations().then(data => {
-      setReservations(data);
-      setLoadingReservations(false);
-    });
-    const channel = subscribeToReservations(() => {
-      loadReservations().then(setReservations);
-    });
-    return () => channel.unsubscribe();
-  }, []);
   const [reserveModalOpen, setReserveModalOpen] = React.useState(false);
   const [reserveDefaultPrinter, setReserveDefaultPrinter] = React.useState(null);
   const [myResOpen, setMyResOpen] = React.useState(false);
@@ -69,28 +44,30 @@ export default function App() {
   const [notif, setNotif] = React.useState(null);
   const [adminPanelOpen, setAdminPanelOpen] = React.useState(false);
 
-  const handleLogin = (user) => {
-    setMe(user);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    }
-  };
+  // Session Supabase — persiste automatiquement entre les refreshs
+  React.useEffect(() => {
+    getSessionUser().then(user => { setMe(user); setAuthLoading(false); });
+    return onAuthChange(user => { setMe(user); setAuthLoading(false); });
+  }, []);
 
-  const handleLogout = () => {
-    setMe(null);
-    setAdminPanelOpen(false);
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(AUTH_STORAGE_KEY);
-    }
-  };
+  // Chargement réservations + realtime
+  React.useEffect(() => {
+    loadReservations().then(data => { setReservations(data); setLoadingReservations(false); });
+    const channel = subscribeToReservations(() => { loadReservations().then(setReservations); });
+    return () => channel.unsubscribe();
+  }, []);
 
   React.useEffect(() => {
-    if (me?.isAdmin) {
-      setAdminPanelOpen(true);
-    } else {
-      setAdminPanelOpen(false);
-    }
+    setAdminPanelOpen(!!me?.isAdmin);
   }, [me]);
+
+  const handleLogin = (user) => setMe(user);
+
+  const handleLogout = async () => {
+    await logoutUser();
+    setMe(null);
+    setAdminPanelOpen(false);
+  };
 
   React.useEffect(() => {
     if (!me) return;
@@ -143,6 +120,19 @@ export default function App() {
     setReserveDefaultPrinter(printerId);
     setReserveModalOpen(true);
   };
+
+  if (authLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: t.dark ? '#000' : '#fafafa', color: t.dark ? '#f5f5f7' : '#1d1d1f',
+        fontSize: 13, opacity: 0.5,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
+      }}>
+        Chargement…
+      </div>
+    );
+  }
 
   if (!me) {
     return (
