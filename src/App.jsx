@@ -13,7 +13,7 @@ import {
 import { PrinterCard } from './PrinterCard.jsx';
 import { ReserveModal } from './ReserveModal.jsx';
 import {
-  LoginScreen, MyReservationsPanel, PrinterDetailPanel, NotificationToast,
+  LoginScreen, RegisterScreen, MyReservationsPanel, PrinterDetailPanel, NotificationToast,
 } from './screens.jsx';
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -27,6 +27,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [me, setMe] = React.useState(null);
+  const [authScreen, setAuthScreen] = React.useState('login');
   const [reservations, setReservations] = React.useState(INITIAL_RESERVATIONS);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [reserveModalOpen, setReserveModalOpen] = React.useState(false);
@@ -88,7 +89,19 @@ export default function App() {
     return (
       <>
         <GlobalAnims />
-        <LoginScreen onLogin={setMe} dark={t.dark} />
+        {authScreen === 'register' ? (
+          <RegisterScreen
+            dark={t.dark}
+            onRegister={(user) => { setMe(user); setAuthScreen('login'); }}
+            onShowLogin={() => setAuthScreen('login')}
+          />
+        ) : (
+          <LoginScreen
+            dark={t.dark}
+            onLogin={setMe}
+            onShowRegister={() => setAuthScreen('register')}
+          />
+        )}
       </>
     );
   }

@@ -1,7 +1,7 @@
-// screens.jsx — Login, MyReservations panel, PrinterDetail panel, Toast
+// screens.jsx — Auth + panels
 import React from 'react';
 import {
-  LOGIN_PASSWORD,
+  loginUser, registerUser,
   computePrinterStatus,
   printerById, printerColor,
   fmtTime, fmtDuration, fmtDayLabel, fmtRelativeFuture,
@@ -9,38 +9,15 @@ import {
 } from './data.js';
 import { Icon, Avatar, Btn, StatePill } from './ui.jsx';
 
-export function LoginScreen({ onLogin, dark }) {
-  const [login, setLogin] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [error, setError] = React.useState('');
+// ── Shared auth card shell ─────────────────────────────────────────────────
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!login.includes('@epitech.eu')) {
-      setError("Utilise ton adresse @epitech.eu");
-      return;
-    }
-    if (password !== LOGIN_PASSWORD) {
-      setError("Mot de passe incorrect");
-      return;
-    }
-    const parts = login.split('@')[0].split('.');
-    const firstName = parts[0] ? parts[0][0].toUpperCase() + parts[0].slice(1) : 'Étudiant';
-    const lastName = parts[1] ? parts[1][0].toUpperCase() + parts[1].slice(1) : '';
-    onLogin({ firstName, lastName, login });
-  };
-
+function AuthCard({ dark, children }) {
   const bg = dark ? '#000' : '#fafafa';
   const card = dark ? '#1c1c1e' : '#ffffff';
-  const fg = dark ? '#f5f5f7' : '#1d1d1f';
-  const sub = dark ? 'rgba(255,255,255,0.55)' : 'rgba(29,29,31,0.55)';
   const border = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
-  const fieldBg = dark ? 'rgba(255,255,255,0.04)' : '#f5f5f7';
-  const errColor = 'oklch(0.6 0.18 25)';
-
   return (
     <div style={{
-      minHeight: '100vh', background: bg, color: fg,
+      minHeight: '100vh', background: bg,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 24,
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif',
@@ -51,72 +28,148 @@ export function LoginScreen({ onLogin, dark }) {
         borderRadius: 20, padding: 36,
         boxShadow: '0 20px 60px rgba(0,0,0,0.08)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 8,
-            background: '#1d1d1f',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Icon name="printer" size={18} color="#fff" />
-          </div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 15, letterSpacing: '-0.005em' }}>QueuePrint</div>
-            <div style={{ fontSize: 11, color: sub }}>Epitech · Atelier 3D</div>
-          </div>
-        </div>
-
-        <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', margin: '0 0 6px' }}>
-          Connexion
-        </h1>
-        <p style={{ fontSize: 13.5, color: sub, margin: '0 0 24px', lineHeight: 1.5 }}>
-          Identifie-toi avec ton compte Epitech pour réserver un créneau d'impression.
-        </p>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: sub, display: 'block', marginBottom: 6 }}>
-              Login Epitech
-            </label>
-            <input
-              type="text"
-              autoFocus
-              value={login}
-              onChange={(e) => { setLogin(e.target.value); setError(''); }}
-              placeholder="prenom.nom@epitech.eu"
-              style={{
-                width: '100%', height: 42, padding: '0 14px',
-                borderRadius: 10, border: `0.5px solid ${error ? errColor : border}`,
-                background: fieldBg, color: fg,
-                fontSize: 14, outline: 'none', boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: sub, display: 'block', marginBottom: 6 }}>
-              Mot de passe
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(''); }}
-              placeholder="••••••••"
-              style={{
-                width: '100%', height: 42, padding: '0 14px',
-                borderRadius: 10, border: `0.5px solid ${error ? errColor : border}`,
-                background: fieldBg, color: fg,
-                fontSize: 14, outline: 'none', boxSizing: 'border-box',
-              }}
-            />
-            {error && <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.18 25)', marginTop: 6 }}>{error}</div>}
-          </div>
-
-          <Btn variant="primary" size="lg" full iconRight="arrow-right">
-            Se connecter
-          </Btn>
-        </form>
+        {children}
       </div>
     </div>
+  );
+}
+
+function AuthBrand({ sub }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
+      <div style={{ width: 32, height: 32, borderRadius: 8, background: '#1d1d1f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name="printer" size={18} color="#fff" />
+      </div>
+      <div>
+        <div style={{ fontWeight: 600, fontSize: 15, letterSpacing: '-0.005em' }}>QueuePrint</div>
+        <div style={{ fontSize: 11, color: sub }}>Epitech · Atelier 3D</div>
+      </div>
+    </div>
+  );
+}
+
+function AuthField({ label, type = 'text', value, onChange, placeholder, error, autoFocus, dark }) {
+  const fg = dark ? '#f5f5f7' : '#1d1d1f';
+  const sub = dark ? 'rgba(255,255,255,0.55)' : 'rgba(29,29,31,0.55)';
+  const border = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
+  const fieldBg = dark ? 'rgba(255,255,255,0.04)' : '#f5f5f7';
+  return (
+    <div>
+      <label style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: sub, display: 'block', marginBottom: 6 }}>
+        {label}
+      </label>
+      <input
+        type={type}
+        autoFocus={autoFocus}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        style={{
+          width: '100%', height: 42, padding: '0 14px',
+          borderRadius: 10, border: `0.5px solid ${error ? 'oklch(0.6 0.18 25)' : border}`,
+          background: fieldBg, color: fg,
+          fontSize: 14, outline: 'none', boxSizing: 'border-box',
+        }}
+      />
+    </div>
+  );
+}
+
+// ── LoginScreen ────────────────────────────────────────────────────────────
+
+export function LoginScreen({ onLogin, onShowRegister, dark }) {
+  const [login, setLogin] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [error, setError] = React.useState('');
+
+  const fg = dark ? '#f5f5f7' : '#1d1d1f';
+  const sub = dark ? 'rgba(255,255,255,0.55)' : 'rgba(29,29,31,0.55)';
+  const border = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const result = loginUser(login, password);
+    if (result.error) { setError(result.error); return; }
+    onLogin(result.user);
+  };
+
+  return (
+    <AuthCard dark={dark}>
+      <AuthBrand sub={sub} />
+      <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', margin: '0 0 6px', color: fg }}>
+        Connexion
+      </h1>
+      <p style={{ fontSize: 13.5, color: sub, margin: '0 0 24px', lineHeight: 1.5 }}>
+        Connecte-toi avec ton compte Epitech pour réserver un créneau.
+      </p>
+
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <AuthField label="Login Epitech" value={login} onChange={e => { setLogin(e.target.value); setError(''); }}
+          placeholder="prenom.nom@epitech.eu" error={!!error} autoFocus dark={dark} />
+        <AuthField label="Mot de passe" type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
+          placeholder="••••••••" error={!!error} dark={dark} />
+        {error && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)', marginTop: -6 }}>{error}</div>}
+        <Btn variant="primary" size="lg" full iconRight="arrow-right">Se connecter</Btn>
+      </form>
+
+      <div style={{ marginTop: 20, paddingTop: 20, borderTop: `0.5px solid ${border}`, textAlign: 'center', fontSize: 13, color: sub }}>
+        Pas encore de compte ?{' '}
+        <button onClick={onShowRegister} style={{ background: 'none', border: 'none', color: fg, fontWeight: 600, cursor: 'pointer', fontSize: 13, padding: 0 }}>
+          S'inscrire
+        </button>
+      </div>
+    </AuthCard>
+  );
+}
+
+// ── RegisterScreen ─────────────────────────────────────────────────────────
+
+export function RegisterScreen({ onRegister, onShowLogin, dark }) {
+  const [login, setLogin] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [confirm, setConfirm] = React.useState('');
+  const [error, setError] = React.useState('');
+
+  const fg = dark ? '#f5f5f7' : '#1d1d1f';
+  const sub = dark ? 'rgba(255,255,255,0.55)' : 'rgba(29,29,31,0.55)';
+  const border = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return; }
+    const result = registerUser(login, password);
+    if (result.error) { setError(result.error); return; }
+    onRegister(result.user);
+  };
+
+  return (
+    <AuthCard dark={dark}>
+      <AuthBrand sub={sub} />
+      <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', margin: '0 0 6px', color: fg }}>
+        Inscription
+      </h1>
+      <p style={{ fontSize: 13.5, color: sub, margin: '0 0 24px', lineHeight: 1.5 }}>
+        Crée ton compte avec ton adresse Epitech pour accéder à l'atelier.
+      </p>
+
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <AuthField label="Login Epitech" value={login} onChange={e => { setLogin(e.target.value); setError(''); }}
+          placeholder="prenom.nom@epitech.eu" error={!!error} autoFocus dark={dark} />
+        <AuthField label="Mot de passe" type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
+          placeholder="6 caractères minimum" error={!!error} dark={dark} />
+        <AuthField label="Confirmer le mot de passe" type="password" value={confirm} onChange={e => { setConfirm(e.target.value); setError(''); }}
+          placeholder="••••••••" error={!!error} dark={dark} />
+        {error && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)', marginTop: -6 }}>{error}</div>}
+        <Btn variant="primary" size="lg" full iconRight="arrow-right">Créer mon compte</Btn>
+      </form>
+
+      <div style={{ marginTop: 20, paddingTop: 20, borderTop: `0.5px solid ${border}`, textAlign: 'center', fontSize: 13, color: sub }}>
+        Déjà un compte ?{' '}
+        <button onClick={onShowLogin} style={{ background: 'none', border: 'none', color: fg, fontWeight: 600, cursor: 'pointer', fontSize: 13, padding: 0 }}>
+          Se connecter
+        </button>
+      </div>
+    </AuthCard>
   );
 }
 

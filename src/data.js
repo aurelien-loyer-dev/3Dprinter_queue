@@ -1,7 +1,44 @@
 // data.js — mock data + helpers
 // All times are stored as minutes-from-now (negative = past).
 
-export const LOGIN_PASSWORD = 'epitech';
+// ── Auth (localStorage) ────────────────────────────────────────────────────
+
+const USERS_KEY = 'queueprint_users';
+
+function parseLogin(login) {
+  const parts = login.split('@')[0].split('.');
+  const firstName = parts[0] ? parts[0][0].toUpperCase() + parts[0].slice(1) : 'Étudiant';
+  const lastName  = parts[1] ? parts[1][0].toUpperCase() + parts[1].slice(1) : '';
+  return { firstName, lastName };
+}
+
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+// Returns { user } on success or { error: string } on failure.
+export function registerUser(login, password) {
+  if (!login.endsWith('@epitech.eu')) return { error: 'Utilise ton adresse @epitech.eu' };
+  if (password.length < 6) return { error: 'Mot de passe trop court (6 caractères minimum)' };
+  const users = getUsers();
+  if (users.find(u => u.login === login)) return { error: 'Ce compte existe déjà' };
+  const { firstName, lastName } = parseLogin(login);
+  const user = { login, firstName, lastName, password };
+  saveUsers([...users, user]);
+  return { user };
+}
+
+export function loginUser(login, password) {
+  const users = getUsers();
+  const user = users.find(u => u.login === login && u.password === password);
+  if (!user) return { error: 'Email ou mot de passe incorrect' };
+  return { user };
+}
 
 export const PRINTERS = [
   { id: 'abdillah', name: 'ABDILLAH', model: 'Bambu Lab P1S',     hue: 14,  size: 'large', printNozzleC: 215, printBedC: 60 },
