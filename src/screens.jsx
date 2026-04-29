@@ -42,7 +42,7 @@ function AuthBrand({ sub }) {
       </div>
       <div>
         <div style={{ fontWeight: 600, fontSize: 15, letterSpacing: '-0.005em' }}>Tek3D</div>
-        <div style={{ fontSize: 11, color: sub }}>Epitech · Imprimantes 3D</div>
+        <div style={{ fontSize: 11, color: sub }}>Epitech · Planning imprimantes 3D</div>
       </div>
     </div>
   );
