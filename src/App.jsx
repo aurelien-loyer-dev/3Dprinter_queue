@@ -55,6 +55,14 @@ export default function App() {
   const [adminPanelOpen, setAdminPanelOpen] = React.useState(false);
 
   React.useEffect(() => {
+    if (me?.isAdmin) {
+      setAdminPanelOpen(true);
+    } else {
+      setAdminPanelOpen(false);
+    }
+  }, [me]);
+
+  React.useEffect(() => {
     if (!me) return;
     const upcoming = reservations
       .filter(r => r.login === me.login && r.startMin > 0 && r.startMin <= 30)
@@ -376,6 +384,7 @@ export default function App() {
           </div>
           <div style={{ flex: 1, overflow: 'auto' }}>
             <AdminPanel
+              key={me.login}
               dark={t.dark}
               reservations={reservations}
               me={me}

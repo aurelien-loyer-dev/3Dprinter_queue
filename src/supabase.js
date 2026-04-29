@@ -2,6 +2,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NOW_FIXED } from './data.js';
 
+const ADMIN_LOGIN = 'aurelien.loyer@epitech.eu';
+
 export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -73,7 +75,14 @@ export async function loginUser(login, password) {
   const ok = await verifyPassword(password, data.hash, data.salt);
   if (!ok) return { error: 'Email ou mot de passe incorrect' };
 
-  return { user: { login: data.login, firstName: data.first_name, lastName: data.last_name, isAdmin: data.is_admin || false } };
+  return {
+    user: {
+      login: data.login,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      isAdmin: data.is_admin || data.login === ADMIN_LOGIN,
+    },
+  };
 }
 
 // ── Reservations ───────────────────────────────────────────────────────────
