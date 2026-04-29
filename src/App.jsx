@@ -209,7 +209,7 @@ export default function App() {
           </div>
           <div>
             <div style={{ fontWeight: 600, fontSize: 14, letterSpacing: '-0.005em' }}>Tek3D</div>
-            <div style={{ fontSize: 10.5, color: sub, marginTop: -1 }}>Epitech · Atelier 3D</div>
+            <div style={{ fontSize: 10.5, color: sub, marginTop: -1 }}>Epitech · Imprimantes 3D</div>
           </div>
         </div>
 

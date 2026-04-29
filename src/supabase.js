@@ -70,7 +70,7 @@ export async function loginUser(login, password) {
     .eq('login', login)
     .single();
 
-  if (error || !data) return { error: 'Email ou mot de passe incorrect' };
+  if (error || !data) return { error: 'Ce compte n’existe pas' };
 
   const ok = await verifyPassword(password, data.hash, data.salt);
   if (!ok) return { error: 'Email ou mot de passe incorrect' };

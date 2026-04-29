@@ -42,7 +42,7 @@ function AuthBrand({ sub }) {
       </div>
       <div>
         <div style={{ fontWeight: 600, fontSize: 15, letterSpacing: '-0.005em' }}>Tek3D</div>
-        <div style={{ fontSize: 11, color: sub }}>Epitech · Atelier 3D</div>
+        <div style={{ fontSize: 11, color: sub }}>Epitech · Imprimantes 3D</div>
       </div>
     </div>
   );
@@ -157,7 +157,7 @@ export function RegisterScreen({ onRegister, onShowLogin, dark }) {
         Inscription
       </h1>
       <p style={{ fontSize: 13.5, color: sub, margin: '0 0 24px', lineHeight: 1.5 }}>
-        Crée ton compte avec ton adresse Epitech pour accéder à l'atelier.
+        Crée ton compte avec ton adresse Epitech pour accéder à l'application.
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
