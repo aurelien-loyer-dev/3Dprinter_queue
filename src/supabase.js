@@ -47,18 +47,27 @@ export function onAuthChange(callback) {
 // ── Edge Function helper ───────────────────────────────────────────────────
 
 async function callOtp(action, body) {
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-otp`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({ action, ...body }),
-    }
-  );
-  return res;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-otp`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ action, ...body }),
+        signal: controller.signal,
+      }
+    );
+    clearTimeout(timeout);
+    return res;
+  } catch {
+    clearTimeout(timeout);
+    return { ok: false, json: async () => ({ error: 'Impossible de contacter le serveur' }) };
+  }
 }
 
 // ── Register — envoie juste le code, le compte est créé après vérification ──
