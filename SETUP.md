@@ -1,4 +1,4 @@
-# QueuePrint — Configuration Supabase
+# Tek3D — Configuration Supabase
 
 ## 1️⃣ Créer un projet Supabase
 

@@ -178,7 +178,7 @@ export default function App() {
             <Icon name="printer" size={15} color="#fff" />
           </div>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14, letterSpacing: '-0.005em' }}>QueuePrint</div>
+            <div style={{ fontWeight: 600, fontSize: 14, letterSpacing: '-0.005em' }}>Tek3D</div>
             <div style={{ fontSize: 10.5, color: sub, marginTop: -1 }}>Epitech · Atelier 3D</div>
           </div>
         </div>

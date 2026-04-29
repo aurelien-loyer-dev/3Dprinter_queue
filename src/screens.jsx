@@ -41,7 +41,7 @@ function AuthBrand({ sub }) {
         <Icon name="printer" size={18} color="#fff" />
       </div>
       <div>
-        <div style={{ fontWeight: 600, fontSize: 15, letterSpacing: '-0.005em' }}>QueuePrint</div>
+        <div style={{ fontWeight: 600, fontSize: 15, letterSpacing: '-0.005em' }}>Tek3D</div>
         <div style={{ fontSize: 11, color: sub }}>Epitech · Atelier 3D</div>
       </div>
     </div>

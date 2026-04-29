@@ -1,4 +1,4 @@
-# 🚀 QueuePrint — Intégration Supabase Complète
+# 🚀 Tek3D — Intégration Supabase Complète
 
 ## ✅ Ce qui a été fait
 

@@ -1,4 +1,4 @@
--- QueuePrint — à coller dans l'éditeur SQL de ton projet Supabase
+-- Tek3D — à coller dans l'éditeur SQL de ton projet Supabase
 
 create table qp_users (
   id         uuid default gen_random_uuid() primary key,
