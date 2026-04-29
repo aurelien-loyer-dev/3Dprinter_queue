@@ -81,14 +81,17 @@ export function LoginScreen({ onLogin, onShowRegister, dark }) {
   const [login, setLogin] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
 
   const fg = dark ? '#f5f5f7' : '#1d1d1f';
   const sub = dark ? 'rgba(255,255,255,0.55)' : 'rgba(29,29,31,0.55)';
   const border = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = loginUser(login, password);
+    setLoading(true);
+    const result = await loginUser(login, password);
+    setLoading(false);
     if (result.error) { setError(result.error); return; }
     onLogin(result.user);
   };
@@ -109,7 +112,9 @@ export function LoginScreen({ onLogin, onShowRegister, dark }) {
         <AuthField label="Mot de passe" type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
           placeholder="••••••••" error={!!error} dark={dark} />
         {error && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)', marginTop: -6 }}>{error}</div>}
-        <Btn variant="primary" size="lg" full iconRight="arrow-right">Se connecter</Btn>
+        <Btn variant="primary" size="lg" full iconRight="arrow-right" disabled={loading}>
+          {loading ? 'Vérification…' : 'Se connecter'}
+        </Btn>
       </form>
 
       <div style={{ marginTop: 20, paddingTop: 20, borderTop: `0.5px solid ${border}`, textAlign: 'center', fontSize: 13, color: sub }}>
@@ -129,15 +134,18 @@ export function RegisterScreen({ onRegister, onShowLogin, dark }) {
   const [password, setPassword] = React.useState('');
   const [confirm, setConfirm] = React.useState('');
   const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
 
   const fg = dark ? '#f5f5f7' : '#1d1d1f';
   const sub = dark ? 'rgba(255,255,255,0.55)' : 'rgba(29,29,31,0.55)';
   const border = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return; }
-    const result = registerUser(login, password);
+    setLoading(true);
+    const result = await registerUser(login, password);
+    setLoading(false);
     if (result.error) { setError(result.error); return; }
     onRegister(result.user);
   };
@@ -160,7 +168,9 @@ export function RegisterScreen({ onRegister, onShowLogin, dark }) {
         <AuthField label="Confirmer le mot de passe" type="password" value={confirm} onChange={e => { setConfirm(e.target.value); setError(''); }}
           placeholder="••••••••" error={!!error} dark={dark} />
         {error && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)', marginTop: -6 }}>{error}</div>}
-        <Btn variant="primary" size="lg" full iconRight="arrow-right">Créer mon compte</Btn>
+        <Btn variant="primary" size="lg" full iconRight="arrow-right" disabled={loading}>
+          {loading ? 'Création en cours…' : 'Créer mon compte'}
+        </Btn>
       </form>
 
       <div style={{ marginTop: 20, paddingTop: 20, borderTop: `0.5px solid ${border}`, textAlign: 'center', fontSize: 13, color: sub }}>
@@ -331,8 +341,6 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
   const printer = printerById(printerId);
   const status = computePrinterStatus(reservations, printerId);
   const isPrinting = status.state === 'printing' || status.state === 'soon_available';
-  const nozzleC = isPrinting ? printer.printNozzleC : 24;
-  const bedC = isPrinting ? printer.printBedC : 22;
 
   const items = reservations
     .filter(r => r.printerId === printerId && r.startMin + r.durationMin > -60 * 24)
@@ -420,12 +428,11 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
           )}
         </div>
 
-        {/* Telemetry */}
+        {/* Stats */}
         <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            <Stat icon="thermometer" label="Buse"       value={`${nozzleC}°C`}                sub={sub} fg={fg} bg={fieldBg} border={border} />
-            <Stat icon="flame"       label="Plateau"    value={`${bedC}°C`}                   sub={sub} fg={fg} bg={fieldBg} border={border} />
-            <Stat icon="sparkle"     label="Charge 24h" value={`${Math.round(load * 100)}%`}  sub={sub} fg={fg} bg={fieldBg} border={border} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+            <Stat icon="sparkle" label="Charge 24h"   value={`${Math.round(load * 100)}%`}               sub={sub} fg={fg} bg={fieldBg} border={border} />
+            <Stat icon="clock"   label="Réservations" value={upcoming.filter(r => r.startMin > 0).length} sub={sub} fg={fg} bg={fieldBg} border={border} />
           </div>
 
           {currentJob && (

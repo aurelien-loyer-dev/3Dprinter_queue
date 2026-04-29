@@ -1,7 +1,8 @@
 // App.jsx — main shell
 import React from 'react';
 import {
-  PRINTERS, INITIAL_RESERVATIONS, NOW_FIXED,
+  PRINTERS, NOW_FIXED,
+  loadReservations, saveReservations,
   computePrinterStatus,
   printerById, printerColor, loadPct,
   fmtTime, fmtDuration, fmtRelativeFuture,
@@ -28,7 +29,11 @@ export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [me, setMe] = React.useState(null);
   const [authScreen, setAuthScreen] = React.useState('login');
-  const [reservations, setReservations] = React.useState(INITIAL_RESERVATIONS);
+  const [reservations, setReservations] = React.useState(() => loadReservations());
+
+  React.useEffect(() => {
+    saveReservations(reservations);
+  }, [reservations]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [reserveModalOpen, setReserveModalOpen] = React.useState(false);
   const [reserveDefaultPrinter, setReserveDefaultPrinter] = React.useState(null);

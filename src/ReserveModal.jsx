@@ -45,7 +45,9 @@ export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reser
   const border = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
   const fieldBg = dark ? 'rgba(255,255,255,0.04)' : '#f5f5f7';
 
-  const durationOptions = [30, 60, 90, 120, 180, 240, 360];
+  // Duration presets in minutes, displayed in hours
+  const durationOptions = [30, 60, 90, 120, 180, 240, 360, 480];
+  const firstFutureIdx = candidates.findIndex(s => s > 0);
 
   return (
     <div
@@ -128,19 +130,19 @@ export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reser
               <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: subText }}>
                 Durée
               </span>
-              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmtDuration(durationMin)}</span>
+              <span style={{ fontSize: 16, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtDuration(durationMin)}</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 10 }}>
               {durationOptions.map(d => (
                 <button
                   key={d}
                   onClick={() => { setDurationMin(d); setChosenStart(null); }}
                   style={{
-                    cursor: 'pointer', height: 34, borderRadius: 8,
+                    cursor: 'pointer', height: 36, borderRadius: 8,
                     border: `0.5px solid ${durationMin === d ? '#1d1d1f' : border}`,
                     background: durationMin === d ? '#1d1d1f' : fieldBg,
                     color: durationMin === d ? '#fff' : fgText,
-                    fontSize: 12, fontWeight: 500,
+                    fontSize: 13, fontWeight: 500,
                     fontVariantNumeric: 'tabular-nums',
                   }}
                 >
@@ -148,18 +150,13 @@ export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reser
                 </button>
               ))}
             </div>
-            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <input
-                type="range"
-                min={30} max={480} step={30}
-                value={durationMin}
-                onChange={(e) => { setDurationMin(parseInt(e.target.value)); setChosenStart(null); }}
-                style={{ flex: 1, accentColor: '#1d1d1f' }}
-              />
-              <span style={{ fontSize: 11, color: subText, fontVariantNumeric: 'tabular-nums', minWidth: 60, textAlign: 'right' }}>
-                30min — 8h
-              </span>
-            </div>
+            <input
+              type="range"
+              min={30} max={480} step={30}
+              value={durationMin}
+              onChange={(e) => { setDurationMin(parseInt(e.target.value)); setChosenStart(null); }}
+              style={{ width: '100%', accentColor: '#1d1d1f' }}
+            />
           </div>
 
           {/* Project name */}
@@ -187,9 +184,24 @@ export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reser
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: subText, marginBottom: 8 }}>
               Créneaux disponibles
             </div>
+
+            {/* Banner when no immediate slot */}
+            {candidates[0] > 0 && (
+              <div style={{
+                marginBottom: 10, padding: '10px 14px', borderRadius: 10,
+                background: 'oklch(0.97 0.04 80)', border: '0.5px solid oklch(0.88 0.06 80)',
+                color: 'oklch(0.45 0.14 80)', fontSize: 12,
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <Icon name="clock" size={13} />
+                Aucun créneau libre maintenant — prochain disponible {fmtRelativeFuture(candidates[0])}
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {candidates.map((s, i) => {
                 const selected = s === startMin;
+                const isFuture = s > 0;
                 return (
                   <button
                     key={i}
@@ -209,15 +221,17 @@ export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reser
                         width: 18, height: 18, borderRadius: '50%',
                         border: `1.5px solid ${selected ? printerColor(printer.hue) : border}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
                       }}>
                         {selected && <span style={{ width: 8, height: 8, borderRadius: '50%', background: printerColor(printer.hue) }} />}
                       </span>
-                      <span style={{ fontSize: 13, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                        {fmtTime(s)} → {fmtTime(s + durationMin)}
+                      <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                        {fmtTime(s)} – {fmtTime(s + durationMin)}
                       </span>
                     </span>
-                    <span style={{ fontSize: 11.5, color: subText, fontVariantNumeric: 'tabular-nums' }}>
-                      {fmtDayLabel(s)} · {fmtRelativeFuture(s)}
+                    <span style={{ fontSize: 11.5, color: subText, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                      {fmtDayLabel(s)}
+                      {isFuture && <span style={{ marginLeft: 6, color: 'oklch(0.5 0.14 80)' }}>{fmtRelativeFuture(s)}</span>}
                     </span>
                   </button>
                 );

@@ -1,9 +1,10 @@
-// data.js — mock data + helpers
+// data.js — data + helpers
 // All times are stored as minutes-from-now (negative = past).
 
-// ── Auth (localStorage) ────────────────────────────────────────────────────
+// ── Auth (localStorage + PBKDF2) ───────────────────────────────────────────
 
 const USERS_KEY = 'queueprint_users';
+const RESERVATIONS_KEY = 'queueprint_reservations';
 
 function parseLogin(login) {
   const parts = login.split('@')[0].split('.');
@@ -16,47 +17,87 @@ function getUsers() {
   try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); }
   catch { return []; }
 }
-
 function saveUsers(users) {
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
 }
 
-// Returns { user } on success or { error: string } on failure.
-export function registerUser(login, password) {
+// ── PBKDF2 helpers ─────────────────────────────────────────────────────────
+
+async function deriveKey(password, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 100_000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await deriveKey(password, salt);
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+  return { hash, salt: saltHex };
+}
+
+async function verifyPassword(password, storedHash, saltHex) {
+  const salt = new Uint8Array(saltHex.match(/.{2}/g).map(b => parseInt(b, 16)));
+  const hash = await deriveKey(password, salt);
+  return hash === storedHash;
+}
+
+// ── Public auth API ────────────────────────────────────────────────────────
+
+export async function registerUser(login, password) {
   if (!login.endsWith('@epitech.eu')) return { error: 'Utilise ton adresse @epitech.eu' };
   if (password.length < 6) return { error: 'Mot de passe trop court (6 caractères minimum)' };
   const users = getUsers();
   if (users.find(u => u.login === login)) return { error: 'Ce compte existe déjà' };
   const { firstName, lastName } = parseLogin(login);
-  const user = { login, firstName, lastName, password };
-  saveUsers([...users, user]);
-  return { user };
+  const { hash, salt } = await hashPassword(password);
+  saveUsers([...users, { login, firstName, lastName, hash, salt }]);
+  return { user: { login, firstName, lastName } };
 }
 
-export function loginUser(login, password) {
+export async function loginUser(login, password) {
   const users = getUsers();
-  const user = users.find(u => u.login === login && u.password === password);
-  if (!user) return { error: 'Email ou mot de passe incorrect' };
-  return { user };
+  const stored = users.find(u => u.login === login);
+  if (!stored) return { error: 'Email ou mot de passe incorrect' };
+  const ok = await verifyPassword(password, stored.hash, stored.salt);
+  if (!ok) return { error: 'Email ou mot de passe incorrect' };
+  return { user: { login: stored.login, firstName: stored.firstName, lastName: stored.lastName } };
 }
+
+// ── Reservation persistence ────────────────────────────────────────────────
+
+export function loadReservations() {
+  try { return JSON.parse(localStorage.getItem(RESERVATIONS_KEY) || '[]'); }
+  catch { return []; }
+}
+
+export function saveReservations(reservations) {
+  localStorage.setItem(RESERVATIONS_KEY, JSON.stringify(reservations));
+}
+
+// ── Printers ───────────────────────────────────────────────────────────────
 
 export const PRINTERS = [
-  { id: 'abdillah', name: 'ABDILLAH', model: 'Bambu Lab P1S',     hue: 14,  size: 'large', printNozzleC: 215, printBedC: 60 },
-  { id: 'sergi',    name: 'SERGI',    model: 'Bambu Lab A1 Mini', hue: 210, size: 'mini',  printNozzleC: 220, printBedC: 55 },
-  { id: 'desyre',   name: 'DÉSYRÉ',   model: 'Bambu Lab A1 Mini', hue: 145, size: 'mini',  printNozzleC: 220, printBedC: 55 },
-  { id: 'sandati',  name: 'SANDATI',  model: 'Bambu Lab A1 Mini', hue: 280, size: 'mini',  printNozzleC: 220, printBedC: 55 },
-  { id: 'noah',     name: 'NOAH',     model: 'Bambu Lab A1 Mini', hue: 38,  size: 'mini',  printNozzleC: 220, printBedC: 55 },
+  { id: 'abdillah', name: 'ABDILLAH', model: 'Bambu Lab P1S',     hue: 14,  size: 'large' },
+  { id: 'sergi',    name: 'SERGI',    model: 'Bambu Lab A1 Mini', hue: 210, size: 'mini'  },
+  { id: 'desyre',   name: 'DÉSYRÉ',   model: 'Bambu Lab A1 Mini', hue: 145, size: 'mini'  },
+  { id: 'sandati',  name: 'SANDATI',  model: 'Bambu Lab A1 Mini', hue: 280, size: 'mini'  },
+  { id: 'noah',     name: 'NOAH',     model: 'Bambu Lab A1 Mini', hue: 38,  size: 'mini'  },
 ];
 
 export const MS_PER_MIN = 60_000;
 export const NOW_FIXED = new Date();
 
-export const INITIAL_RESERVATIONS = [];
-
 // ── Status computation ─────────────────────────────────────────────────────
 // States: 'printing' | 'soon_available' | 'soon_unavailable' | 'available'
 
-const SOON_MIN = 30; // threshold in minutes for "soon"
+const SOON_MIN = 30;
 
 export function computePrinterStatus(reservations, printerId) {
   const currentJob = reservations.find(r =>
@@ -83,7 +124,7 @@ export function computePrinterStatus(reservations, printerId) {
   return { state: 'available' };
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── Time helpers ───────────────────────────────────────────────────────────
 
 export function minToDate(min) {
   return new Date(NOW_FIXED.getTime() + min * MS_PER_MIN);
@@ -121,6 +162,8 @@ export function fmtRelativeFuture(min) {
   if (m === 0) return `dans ${h}h`;
   return `dans ${h}h${String(m).padStart(2, '0')}`;
 }
+
+// ── Printer helpers ────────────────────────────────────────────────────────
 
 export function printerColor(hue, l = 0.55, c = 0.13) {
   return `oklch(${l} ${c} ${hue})`;
