@@ -172,34 +172,29 @@ export function RegisterScreen({ onRegister, onShowLogin, dark }) {
           Vérifie ton mail
         </h1>
         <p style={{ fontSize: 13.5, color: sub, margin: '0 0 24px', lineHeight: 1.5 }}>
-          Un code à 6 chiffres a été envoyé à <strong style={{ color: fg }}>{login}</strong>. Saisis-le ci-dessous.
+          Code envoyé à <strong style={{ color: fg }}>{login}</strong>. Entre-le ci-dessous.
         </p>
 
         <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: sub, display: 'block', marginBottom: 10 }}>
-              Code de vérification
-            </label>
-            <input
-              type="text"
-              inputMode="numeric"
-              autoFocus
-              maxLength={6}
-              value={otp}
-              onChange={e => { setOtp(e.target.value.replace(/\D/g, '')); setError(''); }}
-              placeholder="000000"
-              style={{
-                width: '100%', height: 56, padding: '0 14px',
-                borderRadius: 12, border: `0.5px solid ${error ? 'oklch(0.6 0.18 25)' : border}`,
-                background: fieldBg, color: fg,
-                fontSize: 28, fontWeight: 700, letterSpacing: '0.3em',
-                outline: 'none', boxSizing: 'border-box', textAlign: 'center',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            />
-            {error && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)', marginTop: 8 }}>{error}</div>}
-          </div>
-          <Btn variant="primary" size="lg" full iconRight="check" disabled={loading || otp.length !== 6}>
+          <input
+            type="text"
+            inputMode="numeric"
+            autoFocus
+            maxLength={6}
+            value={otp}
+            onChange={e => { setOtp(e.target.value.replace(/\D/g, '')); setError(''); }}
+            placeholder="000000"
+            style={{
+              width: '100%', height: 64, padding: '0 14px',
+              borderRadius: 12, border: `0.5px solid ${error ? 'oklch(0.6 0.18 25)' : border}`,
+              background: fieldBg, color: fg,
+              fontSize: 32, fontWeight: 700, letterSpacing: '0.35em',
+              outline: 'none', boxSizing: 'border-box', textAlign: 'center',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          />
+          {error && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)', marginTop: -6 }}>{error}</div>}
+          <Btn variant="primary" size="lg" full disabled={loading || otp.length !== 6}>
             {loading ? 'Vérification…' : 'Confirmer'}
           </Btn>
         </form>
