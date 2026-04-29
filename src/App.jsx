@@ -57,10 +57,6 @@ export default function App() {
     return () => channel.unsubscribe();
   }, []);
 
-  React.useEffect(() => {
-    setAdminPanelOpen(!!me?.isAdmin);
-  }, [me]);
-
   const handleLogin = (user) => setMe(user);
 
   const handleLogout = async () => {
