@@ -28,9 +28,24 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "hourSpan": 24
 }/*EDITMODE-END*/;
 
+const AUTH_STORAGE_KEY = 'tek3d.authUser';
+
+function readStoredUser() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.login || !parsed?.firstName || !parsed?.lastName) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [me, setMe] = React.useState(null);
+  const [me, setMe] = React.useState(() => readStoredUser());
   const [authScreen, setAuthScreen] = React.useState('login');
   const [reservations, setReservations] = React.useState([]);
   const [loadingReservations, setLoadingReservations] = React.useState(true);
@@ -53,6 +68,21 @@ export default function App() {
   const [detailPrinterId, setDetailPrinterId] = React.useState(null);
   const [notif, setNotif] = React.useState(null);
   const [adminPanelOpen, setAdminPanelOpen] = React.useState(false);
+
+  const handleLogin = (user) => {
+    setMe(user);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    }
+  };
+
+  const handleLogout = () => {
+    setMe(null);
+    setAdminPanelOpen(false);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    }
+  };
 
   React.useEffect(() => {
     if (me?.isAdmin) {
@@ -121,13 +151,13 @@ export default function App() {
         {authScreen === 'register' ? (
           <RegisterScreen
             dark={t.dark}
-            onRegister={(user) => { setMe(user); setAuthScreen('login'); }}
+            onRegister={(user) => { handleLogin(user); setAuthScreen('login'); }}
             onShowLogin={() => setAuthScreen('login')}
           />
         ) : (
           <LoginScreen
             dark={t.dark}
-            onLogin={setMe}
+            onLogin={handleLogin}
             onShowRegister={() => setAuthScreen('register')}
           />
         )}
@@ -245,7 +275,7 @@ export default function App() {
             <div style={{ fontSize: 10.5, color: sub }}>{me.login}</div>
           </div>
           <button
-            onClick={() => setMe(null)}
+            onClick={handleLogout}
             title="Déconnexion"
             style={{
               width: 28, height: 28, borderRadius: 7, border: 'none',
