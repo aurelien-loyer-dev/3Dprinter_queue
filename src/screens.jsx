@@ -1,7 +1,7 @@
 // screens.jsx — Auth + panels
 import React from 'react';
+import { loginUser, registerUser } from './supabase.js';
 import {
-  loginUser, registerUser,
   computePrinterStatus,
   printerById, printerColor,
   fmtTime, fmtDuration, fmtDayLabel, fmtRelativeFuture,

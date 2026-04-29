@@ -1,87 +1,5 @@
-// data.js — data + helpers
-// All times are stored as minutes-from-now (negative = past).
-
-// ── Auth (localStorage + PBKDF2) ───────────────────────────────────────────
-
-const USERS_KEY = 'queueprint_users';
-const RESERVATIONS_KEY = 'queueprint_reservations';
-
-function parseLogin(login) {
-  const parts = login.split('@')[0].split('.');
-  const firstName = parts[0] ? parts[0][0].toUpperCase() + parts[0].slice(1) : 'Étudiant';
-  const lastName  = parts[1] ? parts[1][0].toUpperCase() + parts[1].slice(1) : '';
-  return { firstName, lastName };
-}
-
-function getUsers() {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); }
-  catch { return []; }
-}
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-// ── PBKDF2 helpers ─────────────────────────────────────────────────────────
-
-async function deriveKey(password, salt) {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations: 100_000, hash: 'SHA-256' },
-    keyMaterial, 256
-  );
-  return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function hashPassword(password) {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const hash = await deriveKey(password, salt);
-  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
-  return { hash, salt: saltHex };
-}
-
-async function verifyPassword(password, storedHash, saltHex) {
-  const salt = new Uint8Array(saltHex.match(/.{2}/g).map(b => parseInt(b, 16)));
-  const hash = await deriveKey(password, salt);
-  return hash === storedHash;
-}
-
-// ── Public auth API ────────────────────────────────────────────────────────
-
-export async function registerUser(login, password) {
-  if (!login.endsWith('@epitech.eu')) return { error: 'Utilise ton adresse @epitech.eu' };
-  if (password.length < 6) return { error: 'Mot de passe trop court (6 caractères minimum)' };
-  const users = getUsers();
-  if (users.find(u => u.login === login)) return { error: 'Ce compte existe déjà' };
-  const { firstName, lastName } = parseLogin(login);
-  const { hash, salt } = await hashPassword(password);
-  saveUsers([...users, { login, firstName, lastName, hash, salt }]);
-  return { user: { login, firstName, lastName } };
-}
-
-export async function loginUser(login, password) {
-  const users = getUsers();
-  const stored = users.find(u => u.login === login);
-  if (!stored) return { error: 'Email ou mot de passe incorrect' };
-  const ok = await verifyPassword(password, stored.hash, stored.salt);
-  if (!ok) return { error: 'Email ou mot de passe incorrect' };
-  return { user: { login: stored.login, firstName: stored.firstName, lastName: stored.lastName } };
-}
-
-// ── Reservation persistence ────────────────────────────────────────────────
-
-export function loadReservations() {
-  try { return JSON.parse(localStorage.getItem(RESERVATIONS_KEY) || '[]'); }
-  catch { return []; }
-}
-
-export function saveReservations(reservations) {
-  localStorage.setItem(RESERVATIONS_KEY, JSON.stringify(reservations));
-}
-
-// ── Printers ───────────────────────────────────────────────────────────────
+// data.js — données statiques + helpers métier
+// Toute la logique DB est dans supabase.js.
 
 export const PRINTERS = [
   { id: 'abdillah', name: 'ABDILLAH', model: 'Bambu Lab P1S',     hue: 14,  size: 'large' },
@@ -109,8 +27,11 @@ export function computePrinterStatus(reservations, printerId) {
   if (currentJob) {
     const etaMin = currentJob.startMin + currentJob.durationMin;
     const progress = Math.min(1, (-currentJob.startMin) / currentJob.durationMin);
-    const state = etaMin <= SOON_MIN ? 'soon_available' : 'printing';
-    return { state, etaMin, progress, currentJobId: currentJob.id };
+    return {
+      state: etaMin <= SOON_MIN ? 'soon_available' : 'printing',
+      etaMin,
+      progress,
+    };
   }
 
   const nextJob = reservations
@@ -146,16 +67,16 @@ export function fmtDuration(min) {
 export function fmtDayLabel(min) {
   const d = minToDate(min);
   const today = NOW_FIXED;
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  const tomorrow  = new Date(today); tomorrow.setDate(today.getDate() + 1);
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return "aujourd'hui";
-  if (d.toDateString() === tomorrow.toDateString()) return 'demain';
+  if (d.toDateString() === today.toDateString())     return "aujourd'hui";
+  if (d.toDateString() === tomorrow.toDateString())  return 'demain';
   if (d.toDateString() === yesterday.toDateString()) return 'hier';
   return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
 export function fmtRelativeFuture(min) {
-  if (min < 1) return 'maintenant';
+  if (min < 1)  return 'maintenant';
   if (min < 60) return `dans ${min}min`;
   const h = Math.floor(min / 60);
   const m = min % 60;
@@ -199,7 +120,7 @@ export function loadPct(reservations, printerId) {
   );
   const booked = items.reduce((sum, r) => {
     const start = Math.max(0, r.startMin);
-    const end = Math.min(horizon, r.startMin + r.durationMin);
+    const end   = Math.min(horizon, r.startMin + r.durationMin);
     return sum + Math.max(0, end - start);
   }, 0);
   return Math.min(1, booked / horizon);

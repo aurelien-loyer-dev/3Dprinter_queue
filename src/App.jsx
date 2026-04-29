@@ -2,11 +2,13 @@
 import React from 'react';
 import {
   PRINTERS, NOW_FIXED,
-  loadReservations, saveReservations,
   computePrinterStatus,
   printerById, printerColor, loadPct,
   fmtTime, fmtDuration, fmtRelativeFuture,
 } from './data.js';
+import {
+  loadReservations, addReservation, deleteReservation, subscribeToReservations,
+} from './supabase.js';
 import { Icon, Avatar, Btn, GlobalAnims, StatePill } from './ui.jsx';
 import {
   useTweaks, TweaksPanel, TweakSection, TweakToggle, TweakRadio, TweakSlider,
@@ -29,12 +31,21 @@ export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [me, setMe] = React.useState(null);
   const [authScreen, setAuthScreen] = React.useState('login');
-  const [reservations, setReservations] = React.useState(() => loadReservations());
-
-  React.useEffect(() => {
-    saveReservations(reservations);
-  }, [reservations]);
+  const [reservations, setReservations] = React.useState([]);
+  const [loadingReservations, setLoadingReservations] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState('');
+
+  // Chargement initial + abonnement realtime
+  React.useEffect(() => {
+    loadReservations().then(data => {
+      setReservations(data);
+      setLoadingReservations(false);
+    });
+    const channel = subscribeToReservations(() => {
+      loadReservations().then(setReservations);
+    });
+    return () => channel.unsubscribe();
+  }, []);
   const [reserveModalOpen, setReserveModalOpen] = React.useState(false);
   const [reserveDefaultPrinter, setReserveDefaultPrinter] = React.useState(null);
   const [myResOpen, setMyResOpen] = React.useState(false);
@@ -59,15 +70,17 @@ export default function App() {
     }
   }, [me]);
 
-  const handleReserve = ({ printerId, startMin, durationMin, project }) => {
-    const id = `res-new-${Date.now()}`;
+  const handleReserve = async ({ printerId, startMin, durationMin, project }) => {
     const newRes = {
-      id, printerId, login: me.login,
+      id: `res-${Date.now()}`,
+      printerId, login: me.login,
       firstName: me.firstName, lastName: me.lastName,
       startMin, durationMin, project,
     };
-    setReservations(prev => [...prev, newRes]);
     setReserveModalOpen(false);
+    // Optimistic update — le realtime confirmera (ou rechargera)
+    setReservations(prev => [...prev, newRes]);
+    await addReservation(newRes);
     const printer = printerById(printerId);
     setNotif({
       title: 'Réservation confirmée',
@@ -76,8 +89,9 @@ export default function App() {
     });
   };
 
-  const handleCancel = (id) => {
+  const handleCancel = async (id) => {
     setReservations(prev => prev.filter(r => r.id !== id));
+    await deleteReservation(id);
     setNotif({
       title: 'Réservation annulée',
       message: 'Le créneau est de nouveau disponible pour les autres étudiants.',
