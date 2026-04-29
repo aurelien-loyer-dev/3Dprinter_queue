@@ -51,7 +51,7 @@ async function callOtp(action, body) {
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
     const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-otp`,
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bright-action`,
       {
         method: 'POST',
         headers: {
