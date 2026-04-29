@@ -61,6 +61,14 @@ export function fmtTime(min) {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+// Arrondi à la dizaine inférieure (47→40, 56→50)
+export function fmtTimeRound(min) {
+  const d = minToDate(min);
+  const total = d.getHours() * 60 + d.getMinutes();
+  const floored = Math.floor(total / 10) * 10;
+  return `${String(Math.floor(floored / 60) % 24).padStart(2, '0')}:${String(floored % 60).padStart(2, '0')}`;
+}
+
 export function fmtDuration(min) {
   const h = Math.floor(min / 60);
   const m = min % 60;

@@ -4,7 +4,7 @@ import {
   loadPct, findNextAvailable,
   getNextSlotOffset,
   printerColor, printerColorSoft,
-  fmtTime, fmtDuration, fmtRelativeFuture,
+  fmtTime, fmtTimeRound, fmtDuration, fmtRelativeFuture,
 } from './data.js';
 import { loadFilamentColors } from './supabase.js';
 import { Icon, Btn, StatePill } from './ui.jsx';
@@ -173,7 +173,7 @@ function Timeline({ hours, pixelsPerHour, slotSize, items, printer, status, me, 
               fontSize: 10, color: subText, paddingLeft: 10, fontVariantNumeric: 'tabular-nums',
               transform: 'translateY(-4px)',
             }}>
-              {fmtTime(min)}
+              {fmtTimeRound(min)}
             </div>
           );
         })}
