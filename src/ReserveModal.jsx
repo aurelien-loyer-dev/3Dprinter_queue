@@ -3,7 +3,7 @@ import React from 'react';
 import {
   PRINTERS,
   computePrinterStatus,
-  printerById, findNextAvailable, printerColor,
+  printerById, findNextAvailable, getNextSlotOffset, printerColor,
   fmtTime, fmtDuration, fmtDayLabel, fmtRelativeFuture,
 } from './data.js';
 import { Icon, Btn } from './ui.jsx';
@@ -26,11 +26,12 @@ export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reser
   if (!open) return null;
 
   const printer = printerById(printerId);
+  const slotOffset = getNextSlotOffset(slotSize);
 
   const candidates = [];
-  let cursor = 0;
+  let cursor = slotOffset;
   for (let i = 0; i < 5; i++) {
-    const next = findNextAvailable(reservations, printerId, durationMin, slotSize, cursor);
+    const next = findNextAvailable(reservations, printerId, durationMin, slotSize, cursor, slotOffset);
     candidates.push(next);
     cursor = next + slotSize;
   }

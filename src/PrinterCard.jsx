@@ -2,6 +2,7 @@
 import React from 'react';
 import {
   loadPct, findNextAvailable,
+  getNextSlotOffset,
   printerColor, printerColorSoft,
   fmtTime, fmtDuration, fmtRelativeFuture,
 } from './data.js';
@@ -11,6 +12,7 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
   const HOURS = hourSpan;
   const PIXELS_PER_HOUR = density === 'compact' ? 36 : density === 'comfy' ? 64 : 48;
   const TIMELINE_HEIGHT = HOURS * PIXELS_PER_HOUR;
+  const slotOffset = getNextSlotOffset(slotSize);
 
   const items = reservations
     .filter(r => r.printerId === printer.id)
@@ -18,7 +20,7 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
     .sort((a, b) => a.startMin - b.startMin);
 
   const load = loadPct(allReservations, printer.id);
-  const nextStart = findNextAvailable(allReservations, printer.id, slotSize);
+  const nextStart = findNextAvailable(allReservations, printer.id, slotSize, slotSize, slotOffset, slotOffset);
 
   const cardBg = dark ? 'rgba(255,255,255,0.04)' : '#ffffff';
   const border = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
@@ -125,7 +127,8 @@ function Timeline({ hours, pixelsPerHour, slotSize, items, printer, status, me, 
   const TIMELINE_HEIGHT = hours * pixelsPerHour;
   const slotsPerHour = 60 / slotSize;
   const slotHeight = pixelsPerHour / slotsPerHour;
-  const totalSlots = hours * slotsPerHour;
+  const slotOffset = getNextSlotOffset(slotSize);
+  const totalSlots = Math.max(0, Math.floor((hours * 60 - slotOffset) / slotSize));
 
   const subText = dark ? 'rgba(255,255,255,0.45)' : 'rgba(29,29,31,0.45)';
   const slotLine = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.035)';
@@ -183,7 +186,7 @@ function Timeline({ hours, pixelsPerHour, slotSize, items, printer, status, me, 
 
         {/* Empty-slot click overlays */}
         {Array.from({ length: totalSlots }).map((_, i) => {
-          const slotStart = i * slotSize;
+          const slotStart = slotOffset + i * slotSize;
           const slotEnd = slotStart + slotSize;
           const occupied = items.some(r => slotStart < r.startMin + r.durationMin && slotEnd > r.startMin);
           if (occupied) return null;

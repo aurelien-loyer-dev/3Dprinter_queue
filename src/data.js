@@ -12,6 +12,11 @@ export const PRINTERS = [
 export const MS_PER_MIN = 60_000;
 export const NOW_FIXED = new Date();
 
+export function getNextSlotOffset(slotSize = 30) {
+  const minutesNow = NOW_FIXED.getHours() * 60 + NOW_FIXED.getMinutes();
+  return (slotSize - (minutesNow % slotSize)) % slotSize;
+}
+
 // ── Status computation ─────────────────────────────────────────────────────
 // States: 'printing' | 'soon_available' | 'soon_unavailable' | 'available'
 
@@ -98,15 +103,25 @@ export function printerById(id) {
   return PRINTERS.find(p => p.id === id);
 }
 
-export function findNextAvailable(reservations, printerId, durationMin, slotSize = 30, fromMin = 0) {
+export function findNextAvailable(reservations, printerId, durationMin, slotSize = 30, fromMin = 0, baseOffset = 0) {
   const sorted = reservations
     .filter(r => r.printerId === printerId && r.startMin + r.durationMin > fromMin)
     .sort((a, b) => a.startMin - b.startMin);
   let cursor = Math.max(fromMin, 0);
-  cursor = Math.ceil(cursor / slotSize) * slotSize;
+  const normalizedBaseOffset = ((baseOffset % slotSize) + slotSize) % slotSize;
+  if (cursor < normalizedBaseOffset) {
+    cursor = normalizedBaseOffset;
+  } else {
+    cursor = normalizedBaseOffset + Math.ceil((cursor - normalizedBaseOffset) / slotSize) * slotSize;
+  }
   for (const r of sorted) {
     if (cursor + durationMin <= r.startMin) return cursor;
-    cursor = Math.max(cursor, Math.ceil((r.startMin + r.durationMin) / slotSize) * slotSize);
+    const afterReservation = Math.max(cursor, r.startMin + r.durationMin);
+    if (afterReservation < normalizedBaseOffset) {
+      cursor = normalizedBaseOffset;
+    } else {
+      cursor = normalizedBaseOffset + Math.ceil((afterReservation - normalizedBaseOffset) / slotSize) * slotSize;
+    }
   }
   return cursor;
 }
