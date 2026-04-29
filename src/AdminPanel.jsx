@@ -25,7 +25,7 @@ export function AdminPanel({ dark, reservations, onReservationDeleted, me }) {
     if (success) {
       const colors = await loadFilamentColors();
       setFilamentColors(colors);
-      setNewColor({ printerId: PRINTERS[0].id, name: '', hex: '#FF0000' });
+      setNewColor({ printerId: newColor.printerId, name: '', hex: '#FF0000' });
     }
     setLoading(false);
   };
