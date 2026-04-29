@@ -102,8 +102,7 @@ export async function verifyOtpAndSignUp(login, password, code) {
 
   if (error) {
     if (error.message.toLowerCase().includes('already registered')) {
-      // Compte déjà créé → connexion directe
-      return loginUser(login, password);
+      return { error: 'Ce compte existe déjà, connecte-toi depuis la page de connexion.' };
     }
     return { error: 'Erreur lors de la création du compte' };
   }
