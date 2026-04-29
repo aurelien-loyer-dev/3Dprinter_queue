@@ -1,10 +1,9 @@
--- QueuePrint — à coller dans l'éditeur SQL de ton projet Supabase
--- Les utilisateurs sont gérés par Supabase Auth (Authentication > Users).
--- Pas besoin de table qp_users, les mots de passe sont gérés par Supabase.
+-- QueuePrint — SQL Editor Supabase
+-- Version idempotente : safe à relancer même si les tables existent déjà.
 
--- ── Réservations ─────────────────────────────────────────────────────────────
+-- ── Réservations ──────────────────────────────────────────────────────────────
 
-create table qp_reservations (
+create table if not exists qp_reservations (
   id           text primary key,
   printer_id   text not null,
   login        text not null,
@@ -17,13 +16,18 @@ create table qp_reservations (
 );
 
 alter table qp_reservations enable row level security;
+
+drop policy if exists "read reservations"   on qp_reservations;
+drop policy if exists "insert reservations" on qp_reservations;
+drop policy if exists "delete reservations" on qp_reservations;
+
 create policy "read reservations"   on qp_reservations for select using (true);
 create policy "insert reservations" on qp_reservations for insert with check (true);
 create policy "delete reservations" on qp_reservations for delete using (true);
 
--- ── Couleurs de filament par imprimante (admin) ───────────────────────────────
+-- ── Couleurs de filament (admin) ──────────────────────────────────────────────
 
-create table qp_filament_colors (
+create table if not exists qp_filament_colors (
   id         text primary key,
   printer_id text not null,
   color_name text not null,
@@ -32,20 +36,11 @@ create table qp_filament_colors (
 );
 
 alter table qp_filament_colors enable row level security;
+
+drop policy if exists "read filament colors"   on qp_filament_colors;
+drop policy if exists "insert filament colors" on qp_filament_colors;
+drop policy if exists "delete filament colors" on qp_filament_colors;
+
 create policy "read filament colors"   on qp_filament_colors for select using (true);
 create policy "insert filament colors" on qp_filament_colors for insert with check (true);
 create policy "delete filament colors" on qp_filament_colors for delete using (true);
-
-
--- ── Configuration Supabase Auth requise ──────────────────────────────────────
--- 1. Authentication > Settings :
---    - "Enable email confirmations" : ON
---    - "Email OTP Expiry" : 600 (10 min)
---
--- 2. Authentication > Email Templates > "Confirm signup" :
---    Remplace le body par quelque chose contenant : {{ .Token }}
---    Exemple :
---      Ton code de vérification QueuePrint : <strong>{{ .Token }}</strong>
---
--- 3. Authentication > URL Configuration :
---    Site URL : http://localhost:5173 (dev) ou ton domaine de prod
