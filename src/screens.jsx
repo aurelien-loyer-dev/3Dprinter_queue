@@ -1,6 +1,6 @@
 // screens.jsx — Auth + panels
 import React from 'react';
-import { loginUser, registerUser, verifyOtp } from './supabase.js';
+import { loginUser, registerUser, verifyOtpAndSignUp } from './supabase.js';
 import {
   computePrinterStatus,
   printerById, printerColor,
@@ -158,13 +158,10 @@ export function RegisterScreen({ onRegister, onShowLogin, dark }) {
     e.preventDefault();
     if (otp.length !== 6) { setError('Le code doit faire 6 chiffres'); return; }
     setLoading(true);
-    const verifyResult = await verifyOtp(login, otp);
-    if (verifyResult.error) { setError(verifyResult.error); setLoading(false); return; }
-    // OTP validé → connexion avec le mot de passe choisi
-    const loginResult = await loginUser(login, password);
+    const result = await verifyOtpAndSignUp(login, password, otp);
     setLoading(false);
-    if (loginResult.error) { setError('Vérification réussie mais connexion échouée'); return; }
-    onRegister(loginResult.user);
+    if (result.error) { setError(result.error); return; }
+    onRegister(result.user);
   };
 
   if (step === 'verify') {

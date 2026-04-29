@@ -61,29 +61,11 @@ async function callOtp(action, body) {
   return res;
 }
 
-// ── Register ───────────────────────────────────────────────────────────────
+// ── Register — envoie juste le code, le compte est créé après vérification ──
 
 export async function registerUser(login, password) {
   if (!login.endsWith('@epitech.eu')) return { error: 'Utilise ton adresse @epitech.eu' };
   if (password.length < 6) return { error: 'Mot de passe trop court (6 caractères minimum)' };
-
-  const { firstName, lastName } = parseLogin(login);
-
-  const { error } = await supabase.auth.signUp({
-    email: login,
-    password,
-    options: { data: { first_name: firstName, last_name: lastName } },
-  });
-
-  if (error) {
-    if (error.message.toLowerCase().includes('already registered')) {
-      return { error: 'Ce compte existe déjà' };
-    }
-    return { error: 'Erreur lors de la création du compte' };
-  }
-
-  // Déconnecte immédiatement — l'accès n'est accordé qu'après vérification OTP
-  await supabase.auth.signOut();
 
   const res = await callOtp('send', { email: login });
   if (!res.ok) return { error: "Erreur lors de l'envoi du code" };
@@ -91,15 +73,33 @@ export async function registerUser(login, password) {
   return { pendingVerification: true };
 }
 
-// ── Verify OTP (code 6 chiffres envoyé par notre Edge Function) ────────────
+// ── Verify OTP puis créer le compte ───────────────────────────────────────
 
-export async function verifyOtp(login, code) {
+export async function verifyOtpAndSignUp(login, password, code) {
+  // 1. Vérifie le code
   const res = await callOtp('verify', { email: login, code: code.trim() });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     return { error: data.error || 'Code invalide ou expiré' };
   }
-  return { verified: true };
+
+  // 2. Code valide → crée le compte Supabase (auto-confirmé)
+  const { firstName, lastName } = parseLogin(login);
+  const { data, error } = await supabase.auth.signUp({
+    email: login,
+    password,
+    options: { data: { first_name: firstName, last_name: lastName } },
+  });
+
+  if (error) {
+    if (error.message.toLowerCase().includes('already registered')) {
+      // Compte déjà créé → connexion directe
+      return loginUser(login, password);
+    }
+    return { error: 'Erreur lors de la création du compte' };
+  }
+
+  return { user: supabaseUserToMe(data.user) };
 }
 
 // ── Login ──────────────────────────────────────────────────────────────────
