@@ -77,7 +77,10 @@ export async function registerUser(login, password) {
   if (password.length < 6) return { error: 'Mot de passe trop court (6 caractères minimum)' };
 
   const res = await callOtp('send', { email: login });
-  if (!res.ok) return { error: "Erreur lors de l'envoi du code" };
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    return { error: data.error || "Erreur lors de l'envoi du code" };
+  }
 
   return { pendingVerification: true };
 }
