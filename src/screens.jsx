@@ -158,10 +158,13 @@ export function RegisterScreen({ onRegister, onShowLogin, dark }) {
     e.preventDefault();
     if (otp.length !== 6) { setError('Le code doit faire 6 chiffres'); return; }
     setLoading(true);
-    const result = await verifyOtp(login, otp);
+    const verifyResult = await verifyOtp(login, otp);
+    if (verifyResult.error) { setError(verifyResult.error); setLoading(false); return; }
+    // OTP validé → connexion avec le mot de passe choisi
+    const loginResult = await loginUser(login, password);
     setLoading(false);
-    if (result.error) { setError(result.error); return; }
-    onRegister(result.user);
+    if (loginResult.error) { setError('Vérification réussie mais connexion échouée'); return; }
+    onRegister(loginResult.user);
   };
 
   if (step === 'verify') {

@@ -44,9 +44,24 @@ export function onAuthChange(callback) {
   return () => subscription.unsubscribe();
 }
 
+// ── Edge Function helper ───────────────────────────────────────────────────
+
+async function callOtp(action, body) {
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-otp`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ action, ...body }),
+    }
+  );
+  return res;
+}
+
 // ── Register ───────────────────────────────────────────────────────────────
-// Renvoie { pendingVerification: true } si un code OTP a été envoyé,
-// { user } si l'email confirmation est désactivée, ou { error }.
 
 export async function registerUser(login, password) {
   if (!login.endsWith('@epitech.eu')) return { error: 'Utilise ton adresse @epitech.eu' };
@@ -54,7 +69,7 @@ export async function registerUser(login, password) {
 
   const { firstName, lastName } = parseLogin(login);
 
-  const { data, error } = await supabase.auth.signUp({
+  const { error } = await supabase.auth.signUp({
     email: login,
     password,
     options: { data: { first_name: firstName, last_name: lastName } },
@@ -67,22 +82,24 @@ export async function registerUser(login, password) {
     return { error: 'Erreur lors de la création du compte' };
   }
 
-  // Supabase envoie un code OTP → session null jusqu'à confirmation
-  if (data.user && !data.session) return { pendingVerification: true };
+  // Déconnecte immédiatement — l'accès n'est accordé qu'après vérification OTP
+  await supabase.auth.signOut();
 
-  return { user: supabaseUserToMe(data.user) };
+  const res = await callOtp('send', { email: login });
+  if (!res.ok) return { error: "Erreur lors de l'envoi du code" };
+
+  return { pendingVerification: true };
 }
 
-// ── Verify OTP (code 6 chiffres reçu par mail) ────────────────────────────
+// ── Verify OTP (code 6 chiffres envoyé par notre Edge Function) ────────────
 
-export async function verifyOtp(login, token) {
-  const { data, error } = await supabase.auth.verifyOtp({
-    email: login,
-    token: token.trim(),
-    type: 'signup',
-  });
-  if (error) return { error: 'Code invalide ou expiré' };
-  return { user: supabaseUserToMe(data.user) };
+export async function verifyOtp(login, code) {
+  const res = await callOtp('verify', { email: login, code: code.trim() });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    return { error: data.error || 'Code invalide ou expiré' };
+  }
+  return { verified: true };
 }
 
 // ── Login ──────────────────────────────────────────────────────────────────
