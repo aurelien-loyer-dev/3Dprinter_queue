@@ -86,6 +86,21 @@ export function AdminPanel({ dark, reservations, onReservationDeleted, me, maint
             <div style={{ fontSize: 10.5, color: sub }}>Gestion imprimantes & filaments</div>
           </div>
         </div>
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={() => window.open(window.location.origin + window.location.pathname + '?kiosk=1', '_blank')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            padding: '0 14px', height: 34, borderRadius: 9,
+            border: `0.5px solid ${border}`,
+            background: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+            color: fg, fontSize: 12.5, fontWeight: 500,
+            cursor: 'pointer', letterSpacing: '0.005em',
+          }}
+        >
+          <Icon name="grid" size={13} />
+          Ouvrir le mode kiosque
+        </button>
       </header>
 
       {/* Content */}
