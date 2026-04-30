@@ -597,25 +597,40 @@ function KioskView({ reservations, loading, maintenanceMap = {} }) {
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
       display: 'flex', flexDirection: 'column',
     }}>
-      {/* LED Bar */}
-      <div style={{ height: 16, background: '#0a0a0a', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px' }}>
+      <style>{`
+        @keyframes neon-pulse {
+          0% { box-shadow: 0 0 10px oklch(0.7 0.2 200), 0 0 20px oklch(0.6 0.2 200), inset 0 0 10px oklch(0.5 0.2 200); }
+          25% { box-shadow: 0 0 10px oklch(0.7 0.2 260), 0 0 20px oklch(0.6 0.2 260), inset 0 0 10px oklch(0.5 0.2 260); }
+          50% { box-shadow: 0 0 10px oklch(0.7 0.2 320), 0 0 20px oklch(0.6 0.2 320), inset 0 0 10px oklch(0.5 0.2 320); }
+          75% { box-shadow: 0 0 10px oklch(0.7 0.2 200), 0 0 20px oklch(0.6 0.2 200), inset 0 0 10px oklch(0.5 0.2 200); }
+          100% { box-shadow: 0 0 10px oklch(0.7 0.2 200), 0 0 20px oklch(0.6 0.2 200), inset 0 0 10px oklch(0.5 0.2 200); }
+        }
+      `}</style>
+
+      {/* Printers Status Bar */}
+      <div style={{ height: 12, background: '#0a0a0a', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 2, padding: '0 8px' }}>
         {PRINTERS.map(p => (
           <div key={p.id} style={{
             flex: 1,
-            height: 8,
-            borderRadius: 4,
+            height: 6,
+            borderRadius: 3,
             background: printerColor(p.hue, 0.55, 0.15),
-            opacity: maintenanceMap[p.id] ? 0.3 : (
+            opacity: maintenanceMap[p.id] ? 0.25 : (
               ['printing', 'soon_available'].includes(printerStatus[p.id].state) ? 1 :
-              ['available', 'soon_unavailable'].includes(printerStatus[p.id].state) ? 0.7 : 0.4
+              ['available', 'soon_unavailable'].includes(printerStatus[p.id].state) ? 0.65 : 0.35
             ),
-            boxShadow: ['printing', 'soon_available'].includes(printerStatus[p.id].state)
-              ? `0 0 8px ${printerColor(p.hue, 0.65, 0.17)}, inset 0 0 4px ${printerColor(p.hue, 0.65, 0.17)}`
-              : 'none',
-            transition: 'all 0.3s ease',
+            transition: 'opacity 0.3s ease',
           }} title={`${p.name} - ${printerStatus[p.id].state}`} />
         ))}
       </div>
+
+      {/* Neon LED Bar */}
+      <div style={{ 
+        height: 14, 
+        background: 'linear-gradient(90deg, oklch(0.2 0.08 200) 0%, oklch(0.25 0.12 220) 50%, oklch(0.2 0.08 200) 100%)',
+        flexShrink: 0, 
+        animation: 'neon-pulse 4s ease-in-out infinite',
+      }} />
 
       {/* Simple time header */}
       <header style={{
@@ -892,20 +907,20 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
                     }}>
                       {/* Time */}
                       <div style={{
-                        fontSize: 13,
+                        fontSize: 18,
                         fontWeight: 700,
                         color: '#fff',
                         fontVariantNumeric: 'tabular-nums',
                         lineHeight: 1,
-                        marginBottom: 3,
+                        marginBottom: 4,
                       }}>
                         {fmtTime(r.startMin)}
                       </div>
                       {/* Duration badge */}
                       <div style={{
-                        fontSize: 9,
-                        color: 'rgba(255,255,255,0.8)',
-                        fontWeight: 500,
+                        fontSize: 13,
+                        color: 'rgba(255,255,255,0.9)',
+                        fontWeight: 600,
                       }}>
                         {fmtDuration(r.durationMin)}
                       </div>
