@@ -207,3 +207,33 @@ export async function deleteFilamentColor(id) {
 
 // Alias pour l'AdminPanel
 export const deleteReservationAdmin = deleteReservation;
+
+// ── Printer notes ──────────────────────────────────────────────────────────
+
+export async function loadPrinterNotes(printerId) {
+  const { data, error } = await supabase
+    .from('qp_printer_notes')
+    .select('*')
+    .eq('printer_id', printerId)
+    .order('created_at', { ascending: false })
+    .limit(5);
+  if (error) { console.error('loadPrinterNotes:', error.message); return []; }
+  return data || [];
+}
+
+export async function addPrinterNote(printerId, content, me) {
+  const id = `note-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const { error } = await supabase.from('qp_printer_notes').insert({
+    id, printer_id: printerId, content,
+    author_login: me.login,
+    author_name: `${me.firstName} ${me.lastName}`,
+  });
+  if (error) { console.error('addPrinterNote:', error.message); return false; }
+  return true;
+}
+
+export async function deletePrinterNote(id) {
+  const { error } = await supabase.from('qp_printer_notes').delete().eq('id', id);
+  if (error) { console.error('deletePrinterNote:', error.message); return false; }
+  return true;
+}

@@ -6,7 +6,7 @@ import {
   printerColor, printerColorSoft,
   fmtTime, fmtTimeRound, fmtDuration, fmtRelativeFuture,
 } from './data.js';
-import { loadFilamentColors } from './supabase.js';
+import { loadFilamentColors, loadPrinterNotes, addPrinterNote, deletePrinterNote } from './supabase.js';
 import { Icon, Btn, StatePill } from './ui.jsx';
 
 export function PrinterCard({ printer, status, reservations, allReservations, me, onSlotClick, onReserve, onCancel, slotSize, density, dark, searchQuery, hourSpan = 24 }) {
@@ -16,12 +16,34 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
   const slotOffset = getNextSlotOffset(slotSize);
 
   const [filamentColors, setFilamentColors] = React.useState([]);
+  const [notes, setNotes] = React.useState([]);
+  const [noteInput, setNoteInput] = React.useState('');
+  const [showNoteInput, setShowNoteInput] = React.useState(false);
+  const [noteLoading, setNoteLoading] = React.useState(false);
 
   React.useEffect(() => {
     loadFilamentColors().then(colors => {
       setFilamentColors(colors.filter(c => c.printer_id === printer.id));
     });
+    loadPrinterNotes(printer.id).then(setNotes);
   }, [printer.id]);
+
+  const handleAddNote = async () => {
+    if (!noteInput.trim() || !me) return;
+    setNoteLoading(true);
+    const ok = await addPrinterNote(printer.id, noteInput.trim(), me);
+    if (ok) {
+      loadPrinterNotes(printer.id).then(setNotes);
+      setNoteInput('');
+      setShowNoteInput(false);
+    }
+    setNoteLoading(false);
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    const ok = await deletePrinterNote(noteId);
+    if (ok) setNotes(prev => prev.filter(n => n.id !== noteId));
+  };
 
   const items = reservations
     .filter(r => r.printerId === printer.id)
@@ -116,6 +138,107 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
                 }} title={color.color_name} />
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Notes */}
+        {(notes.length > 0 || me) && (
+          <div style={{ marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${border}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div style={{ fontSize: 10, color: subText, fontWeight: 500 }}>Notes</div>
+              {me && !showNoteInput && (
+                <button
+                  onClick={() => setShowNoteInput(true)}
+                  style={{
+                    width: 18, height: 18, borderRadius: 4, border: 'none',
+                    background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                    color: subText, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  title="Ajouter une note"
+                >
+                  <Icon name="plus" size={9} />
+                </button>
+              )}
+            </div>
+            {notes.slice(0, 2).map(note => (
+              <div key={note.id} style={{
+                fontSize: 11, padding: '5px 8px', borderRadius: 6, marginBottom: 4,
+                background: dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                border: `0.5px solid ${border}`,
+                position: 'relative',
+              }}>
+                <div style={{
+                  color: fgText, lineHeight: 1.4,
+                  paddingRight: me && (me.isAdmin || me.login === note.author_login) ? 18 : 0,
+                }}>
+                  {note.content}
+                </div>
+                <div style={{ fontSize: 9.5, color: subText, marginTop: 2 }}>
+                  {note.author_name}
+                </div>
+                {me && (me.isAdmin || me.login === note.author_login) && (
+                  <button
+                    onClick={() => handleDeleteNote(note.id)}
+                    style={{
+                      position: 'absolute', top: 4, right: 4,
+                      width: 16, height: 16, borderRadius: 3, border: 'none',
+                      background: 'transparent', color: subText, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                    title="Supprimer"
+                  >
+                    <Icon name="close" size={9} />
+                  </button>
+                )}
+              </div>
+            ))}
+            {notes.length === 0 && !showNoteInput && (
+              <div style={{ fontSize: 11, color: subText }}>Aucune note</div>
+            )}
+            {showNoteInput && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <textarea
+                  autoFocus
+                  value={noteInput}
+                  onChange={e => setNoteInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddNote(); } if (e.key === 'Escape') { setShowNoteInput(false); setNoteInput(''); } }}
+                  placeholder="Ajouter une note…"
+                  rows={2}
+                  style={{
+                    width: '100%', resize: 'none', border: `0.5px solid ${border}`,
+                    borderRadius: 6, padding: '5px 7px', fontSize: 11,
+                    background: dark ? 'rgba(255,255,255,0.05)' : '#fff',
+                    color: fgText, outline: 'none', boxSizing: 'border-box',
+                    fontFamily: 'inherit',
+                  }}
+                />
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button
+                    onClick={handleAddNote}
+                    disabled={noteLoading || !noteInput.trim()}
+                    style={{
+                      flex: 1, height: 24, borderRadius: 5, border: 'none',
+                      background: printerColor(printer.hue), color: '#fff',
+                      fontSize: 10.5, fontWeight: 600, cursor: 'pointer',
+                      opacity: noteLoading || !noteInput.trim() ? 0.5 : 1,
+                    }}
+                  >
+                    {noteLoading ? '…' : 'Publier'}
+                  </button>
+                  <button
+                    onClick={() => { setShowNoteInput(false); setNoteInput(''); }}
+                    style={{
+                      height: 24, padding: '0 8px', borderRadius: 5, border: 'none',
+                      background: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+                      color: subText, fontSize: 10.5, cursor: 'pointer',
+                    }}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
