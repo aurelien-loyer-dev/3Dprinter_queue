@@ -605,6 +605,16 @@ function KioskView({ reservations, loading, maintenanceMap = {} }) {
           75% { box-shadow: 0 0 10px oklch(0.7 0.2 200), 0 0 20px oklch(0.6 0.2 200), inset 0 0 10px oklch(0.5 0.2 200); }
           100% { box-shadow: 0 0 10px oklch(0.7 0.2 200), 0 0 20px oklch(0.6 0.2 200), inset 0 0 10px oklch(0.5 0.2 200); }
         }
+        @keyframes neon-glow {
+          0%, 100% { text-shadow: 0 0 4px currentColor, 0 0 8px currentColor; }
+          50% { text-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+        }
+        @keyframes color-shift {
+          0% { background: linear-gradient(90deg, oklch(0.7 0.22 200) 0%, oklch(0.7 0.22 220) 50%, oklch(0.7 0.22 200) 100%); }
+          33% { background: linear-gradient(90deg, oklch(0.7 0.22 260) 0%, oklch(0.7 0.22 280) 50%, oklch(0.7 0.22 260) 100%); }
+          66% { background: linear-gradient(90deg, oklch(0.7 0.22 320) 0%, oklch(0.7 0.22 340) 50%, oklch(0.7 0.22 320) 100%); }
+          100% { background: linear-gradient(90deg, oklch(0.7 0.22 200) 0%, oklch(0.7 0.22 220) 50%, oklch(0.7 0.22 200) 100%); }
+        }
       `}</style>
 
       {/* Printers Status Bar */}
@@ -626,10 +636,10 @@ function KioskView({ reservations, loading, maintenanceMap = {} }) {
 
       {/* Neon LED Bar */}
       <div style={{ 
-        height: 14, 
-        background: 'linear-gradient(90deg, oklch(0.2 0.08 200) 0%, oklch(0.25 0.12 220) 50%, oklch(0.2 0.08 200) 100%)',
-        flexShrink: 0, 
-        animation: 'neon-pulse 4s ease-in-out infinite',
+        height: 20, 
+        flexShrink: 0,
+        animation: 'color-shift 6s ease-in-out infinite',
+        boxShadow: '0 0 20px oklch(0.7 0.2 200), 0 0 40px oklch(0.6 0.2 200), inset 0 0 15px oklch(0.5 0.2 200)',
       }} />
 
       {/* Simple time header */}
@@ -808,11 +818,18 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
         )}
 
         {/* Load bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
-          <div style={{ flex: 1, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
-            <div style={{ width: `${load * 100}%`, height: '100%', background: accent, borderRadius: 999, transition: 'width 1s ease' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+          <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', boxShadow: 'inset 0 0 8px rgba(0,0,0,0.5)' }}>
+            <div style={{ 
+              width: `${load * 100}%`, 
+              height: '100%', 
+              background: accent, 
+              borderRadius: 999, 
+              transition: 'width 1s ease',
+              boxShadow: `0 0 12px ${accent}`,
+            }} />
           </div>
-          <span style={{ fontSize: 10.5, color: sub, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+          <span style={{ fontSize: 12, color: sub, fontVariantNumeric: 'tabular-nums', flexShrink: 0, fontWeight: 600, minWidth: 32 }}>
             {Math.round(load * 100)}%
           </span>
         </div>
