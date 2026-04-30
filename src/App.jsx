@@ -597,56 +597,35 @@ function KioskView({ reservations, loading, maintenanceMap = {} }) {
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
       display: 'flex', flexDirection: 'column',
     }}>
-      {/* Refresh bar */}
-      <div style={{ height: 3, background: '#161616', flexShrink: 0 }}>
-        <div key={tick} style={{
-          height: '100%',
-          background: 'linear-gradient(90deg, oklch(0.6 0.2 220), oklch(0.7 0.2 280))',
-          animation: 'kiosk-bar 30s linear forwards',
-        }} />
+      {/* LED Bar */}
+      <div style={{ height: 16, background: '#0a0a0a', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px' }}>
+        {PRINTERS.map(p => (
+          <div key={p.id} style={{
+            flex: 1,
+            height: 8,
+            borderRadius: 4,
+            background: printerColor(p.hue, 0.55, 0.15),
+            opacity: maintenanceMap[p.id] ? 0.3 : (
+              ['printing', 'soon_available'].includes(printerStatus[p.id].state) ? 1 :
+              ['available', 'soon_unavailable'].includes(printerStatus[p.id].state) ? 0.7 : 0.4
+            ),
+            boxShadow: ['printing', 'soon_available'].includes(printerStatus[p.id].state)
+              ? `0 0 8px ${printerColor(p.hue, 0.65, 0.17)}, inset 0 0 4px ${printerColor(p.hue, 0.65, 0.17)}`
+              : 'none',
+            transition: 'all 0.3s ease',
+          }} title={`${p.name} - ${printerStatus[p.id].state}`} />
+        ))}
       </div>
 
-      {/* Header */}
+      {/* Simple time header */}
       <header style={{
-        padding: '10px 24px', flexShrink: 0,
+        padding: '8px 24px', flexShrink: 0,
         background: '#0f0f0f', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
-        display: 'flex', alignItems: 'center', gap: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 7, background: '#1d1d1f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="printer" size={15} color="#fff" />
-          </div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.01em' }}>Tek3D</div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Epitech · Atelier 3D</div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, marginLeft: 20, paddingLeft: 18, borderLeft: '0.5px solid rgba(255,255,255,0.07)' }}>
-          <KioskChip color="oklch(0.65 0.18 50)"  label="En impression" value={printingCount} />
-          <KioskChip color="oklch(0.65 0.18 145)" label="Disponibles"   value={availableCount} />
-          {maintenanceCount > 0 && <KioskChip color="oklch(0.65 0.18 25)" label="Maintenance" value={maintenanceCount} />}
-        </div>
-
-        {/* Live clock — centré */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-          <div style={{ fontSize: 34, fontWeight: 200, letterSpacing: '0.06em', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
-            {now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-          </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3, textTransform: 'capitalize' }}>
-            {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </div>
-        </div>
-
-        {/* Live indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ textAlign: 'right', fontSize: 10.5, color: 'rgba(255,255,255,0.25)', lineHeight: 1.5 }}>
-            Prochaine mise à jour<br />
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>dans {countdown}s</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 7, background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.07)' }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'oklch(0.65 0.18 145)', animation: 'kiosk-pulse 2s ease-in-out infinite', flexShrink: 0 }} />
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.08em' }}>EN DIRECT</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ fontSize: 48, fontWeight: 200, letterSpacing: '0.06em', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+            {now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
           </div>
         </div>
       </header>
@@ -825,31 +804,76 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
       </div>
 
       {/* Queue */}
-      <div style={{ flex: 1, padding: '10px 12px', overflowY: 'auto', minHeight: 0 }}>
+      <div style={{ flex: 1, padding: '12px', overflowY: 'auto', minHeight: 0 }}>
         {queue.length === 0 ? (
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)', textAlign: 'center', paddingTop: 10 }}>
             {isMaint ? '' : 'Aucune réservation à venir'}
           </div>
-        ) : queue.map((r, i) => (
-          <div key={r.id} style={{
-            display: 'flex', alignItems: 'center', gap: 9,
-            padding: '7px 10px', borderRadius: 8, marginBottom: 4,
-            background: i === 0
-              ? `color-mix(in oklch, ${printerColor(printer.hue)} 9%, rgba(255,255,255,0.02))`
-              : 'rgba(255,255,255,0.025)',
-            border: `0.5px solid ${i === 0 ? `color-mix(in oklch, ${printerColor(printer.hue)} 22%, transparent)` : border}`,
-          }}>
-            <div style={{ width: 3, alignSelf: 'stretch', borderRadius: 99, background: i === 0 ? printerColor(printer.hue) : 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 12.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        ) : queue.map((r, i) => {
+          const nextStart = i === 0 ? r.startMin : queue[i-1].startMin + queue[i-1].durationMin;
+          const gapMin = r.startMin - nextStart;
+          const startPercent = (r.startMin / (24 * 60)) * 100;
+          const durationPercent = (r.durationMin / (24 * 60)) * 100;
+          
+          return (
+            <div key={r.id} style={{ marginBottom: 8 }}>
+              {/* Mini timeline bar */}
+              <div style={{
+                position: 'relative',
+                height: 48,
+                background: 'rgba(255,255,255,0.02)',
+                border: `0.5px solid ${border}`,
+                borderRadius: 8,
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  left: `${startPercent}%`,
+                  width: `${durationPercent}%`,
+                  top: 0, bottom: 0,
+                  background: printerColor(printer.hue, 0.65, 0.16),
+                  opacity: i === 0 ? 0.9 : 0.7,
+                  borderRadius: 6,
+                  margin: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  padding: '0 8px',
+                  minWidth: 60,
+                  boxShadow: i === 0 ? `0 0 12px ${printerColor(printer.hue, 0.65, 0.17)}` : 'none',
+                }} />
+                {/* Time labels */}
+                <div style={{
+                  position: 'absolute',
+                  left: `${Math.min(startPercent, 90)}%`,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  fontSize: 9,
+                  color: 'white',
+                  fontWeight: 600,
+                  fontVariantNumeric: 'tabular-nums',
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                  whiteSpace: 'nowrap',
+                  textShadow: '0 0 4px rgba(0,0,0,0.5)',
+                  paddingLeft: 4,
+                }}>
+                  {fmtTime(r.startMin)} – {fmtTime(r.startMin + r.durationMin)}
+                </div>
+              </div>
+              
+              {/* Person info */}
+              <div style={{ padding: '6px 8px', fontSize: 11.5, fontWeight: 500 }}>
                 {r.firstName} {r.lastName}
               </div>
-              <div style={{ fontSize: 10.5, color: sub, fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>
-                {fmtTime(r.startMin)} – {fmtTime(r.startMin + r.durationMin)}
-              </div>
+              {r.project && r.project !== 'Impression' && (
+                <div style={{ padding: '0 8px 4px', fontSize: 10, color: sub }}>
+                  {r.project}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
