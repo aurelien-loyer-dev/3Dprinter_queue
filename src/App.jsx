@@ -10,6 +10,7 @@ import {
   getSessionUser, onAuthChange, logoutUser,
   loadReservations, addReservation, deleteReservation, subscribeToReservations,
   loadMaintenance, subscribeToMaintenance,
+  loadFilamentColors,
 } from './supabase.js';
 import { Icon, Avatar, Btn, GlobalAnims, StatePill } from './ui.jsx';
 import {
@@ -667,6 +668,13 @@ function ArcProgress({ progress, hue, size = 90 }) {
 function KioskPrinterCard({ printer, status, reservations, maintenance }) {
   const { NOW_FIXED: _nf } = React.useMemo(() => ({ NOW_FIXED: null }), []);
   const elapsedMin = (Date.now() - (reservations._nowFixed || 0)) / 60_000;
+  const [filamentColors, setFilamentColors] = React.useState([]);
+
+  React.useEffect(() => {
+    loadFilamentColors().then(colors => {
+      setFilamentColors(colors.filter(c => c.printer_id === printer.id));
+    });
+  }, [printer.id]);
 
   const allItems = reservations
     .filter(r => r.printerId === printer.id && r.startMin + r.durationMin > 0 && r.startMin < 24 * 60)
@@ -803,6 +811,38 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
             {Math.round(load * 100)}%
           </span>
         </div>
+
+        {/* Filaments */}
+        {filamentColors.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 9.5, color: sub, fontWeight: 600, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Filaments dispo
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {filamentColors.map(color => (
+                <div key={color.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: `0.5px solid ${color.hex_color}40`,
+                }}>
+                  <div style={{
+                    width: 12, height: 12, borderRadius: 3,
+                    background: color.hex_color,
+                    border: `0.5px solid ${color.hex_color}`,
+                    flexShrink: 0,
+                  }} />
+                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap' }}>
+                    {color.color_name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Planning Timeline */}
