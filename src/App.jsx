@@ -598,48 +598,18 @@ function KioskView({ reservations, loading, maintenanceMap = {} }) {
       display: 'flex', flexDirection: 'column',
     }}>
       <style>{`
-        @keyframes neon-pulse {
-          0% { box-shadow: 0 0 10px oklch(0.7 0.2 200), 0 0 20px oklch(0.6 0.2 200), inset 0 0 10px oklch(0.5 0.2 200); }
-          25% { box-shadow: 0 0 10px oklch(0.7 0.2 260), 0 0 20px oklch(0.6 0.2 260), inset 0 0 10px oklch(0.5 0.2 260); }
-          50% { box-shadow: 0 0 10px oklch(0.7 0.2 320), 0 0 20px oklch(0.6 0.2 320), inset 0 0 10px oklch(0.5 0.2 320); }
-          75% { box-shadow: 0 0 10px oklch(0.7 0.2 200), 0 0 20px oklch(0.6 0.2 200), inset 0 0 10px oklch(0.5 0.2 200); }
-          100% { box-shadow: 0 0 10px oklch(0.7 0.2 200), 0 0 20px oklch(0.6 0.2 200), inset 0 0 10px oklch(0.5 0.2 200); }
-        }
         @keyframes neon-glow {
-          0%, 100% { text-shadow: 0 0 4px currentColor, 0 0 8px currentColor; }
-          50% { text-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
-        }
-        @keyframes color-shift {
-          0% { background: linear-gradient(90deg, oklch(0.7 0.22 200) 0%, oklch(0.7 0.22 220) 50%, oklch(0.7 0.22 200) 100%); }
-          33% { background: linear-gradient(90deg, oklch(0.7 0.22 260) 0%, oklch(0.7 0.22 280) 50%, oklch(0.7 0.22 260) 100%); }
-          66% { background: linear-gradient(90deg, oklch(0.7 0.22 320) 0%, oklch(0.7 0.22 340) 50%, oklch(0.7 0.22 320) 100%); }
-          100% { background: linear-gradient(90deg, oklch(0.7 0.22 200) 0%, oklch(0.7 0.22 220) 50%, oklch(0.7 0.22 200) 100%); }
+          0%, 100% { box-shadow: 0 0 15px oklch(0.7 0.22 280), 0 0 30px oklch(0.6 0.22 280), inset 0 0 12px oklch(0.5 0.22 280); }
+          50% { box-shadow: 0 0 20px oklch(0.75 0.25 280), 0 0 40px oklch(0.65 0.25 280), inset 0 0 15px oklch(0.55 0.25 280); }
         }
       `}</style>
 
-      {/* Printers Status Bar */}
-      <div style={{ height: 12, background: '#0a0a0a', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 2, padding: '0 8px' }}>
-        {PRINTERS.map(p => (
-          <div key={p.id} style={{
-            flex: 1,
-            height: 6,
-            borderRadius: 3,
-            background: printerColor(p.hue, 0.55, 0.15),
-            opacity: maintenanceMap[p.id] ? 0.25 : (
-              ['printing', 'soon_available'].includes(printerStatus[p.id].state) ? 1 :
-              ['available', 'soon_unavailable'].includes(printerStatus[p.id].state) ? 0.65 : 0.35
-            ),
-            transition: 'opacity 0.3s ease',
-          }} title={`${p.name} - ${printerStatus[p.id].state}`} />
-        ))}
-      </div>
-
       {/* Neon LED Bar */}
       <div style={{ 
-        height: 20, 
+        height: 24, 
+        background: 'oklch(0.7 0.22 280)',
         flexShrink: 0,
-        animation: 'color-shift 6s ease-in-out infinite',
-        boxShadow: '0 0 20px oklch(0.7 0.2 200), 0 0 40px oklch(0.6 0.2 200), inset 0 0 15px oklch(0.5 0.2 200)',
+        animation: 'neon-glow 2s ease-in-out infinite',
       }} />
 
       {/* Simple time header */}
