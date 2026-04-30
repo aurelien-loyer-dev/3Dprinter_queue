@@ -803,77 +803,160 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
         </div>
       </div>
 
-      {/* Queue */}
-      <div style={{ flex: 1, padding: '12px', overflowY: 'auto', minHeight: 0 }}>
+      {/* Planning Timeline */}
+      <div style={{ flex: 1, padding: '8px 12px', overflowY: 'auto', minHeight: 0, position: 'relative' }}>
         {queue.length === 0 ? (
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)', textAlign: 'center', paddingTop: 10 }}>
             {isMaint ? '' : 'Aucune réservation à venir'}
           </div>
-        ) : queue.map((r, i) => {
-          const nextStart = i === 0 ? r.startMin : queue[i-1].startMin + queue[i-1].durationMin;
-          const gapMin = r.startMin - nextStart;
-          const startPercent = (r.startMin / (24 * 60)) * 100;
-          const durationPercent = (r.durationMin / (24 * 60)) * 100;
-          
-          return (
-            <div key={r.id} style={{ marginBottom: 8 }}>
-              {/* Mini timeline bar */}
-              <div style={{
-                position: 'relative',
-                height: 48,
-                background: 'rgba(255,255,255,0.02)',
-                border: `0.5px solid ${border}`,
-                borderRadius: 8,
-                overflow: 'hidden',
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  left: `${startPercent}%`,
-                  width: `${durationPercent}%`,
-                  top: 0, bottom: 0,
-                  background: printerColor(printer.hue, 0.65, 0.16),
-                  opacity: i === 0 ? 0.9 : 0.7,
-                  borderRadius: 6,
-                  margin: 4,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-start',
-                  padding: '0 8px',
-                  minWidth: 60,
-                  boxShadow: i === 0 ? `0 0 12px ${printerColor(printer.hue, 0.65, 0.17)}` : 'none',
-                }} />
-                {/* Time labels */}
-                <div style={{
-                  position: 'absolute',
-                  left: `${Math.min(startPercent, 90)}%`,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  fontSize: 9,
-                  color: 'white',
-                  fontWeight: 600,
-                  fontVariantNumeric: 'tabular-nums',
-                  pointerEvents: 'none',
-                  zIndex: 1,
-                  whiteSpace: 'nowrap',
-                  textShadow: '0 0 4px rgba(0,0,0,0.5)',
-                  paddingLeft: 4,
-                }}>
-                  {fmtTime(r.startMin)} – {fmtTime(r.startMin + r.durationMin)}
-                </div>
-              </div>
-              
-              {/* Person info */}
-              <div style={{ padding: '6px 8px', fontSize: 11.5, fontWeight: 500 }}>
-                {r.firstName} {r.lastName}
-              </div>
-              {r.project && r.project !== 'Impression' && (
-                <div style={{ padding: '0 8px 4px', fontSize: 10, color: sub }}>
-                  {r.project}
-                </div>
-              )}
+        ) : (
+          <>
+            {/* Hour markers ruler */}
+            <div style={{
+              display: 'flex',
+              marginBottom: 8,
+              fontSize: 9,
+              color: 'rgba(255,255,255,0.3)',
+              fontVariantNumeric: 'tabular-nums',
+              fontWeight: 500,
+            }}>
+              {Array.from({ length: 12 }).map((_, i) => {
+                const hour = (i * 2) % 24;
+                return (
+                  <div key={i} style={{
+                    flex: `${(2 * 60) / (24 * 60)}`,
+                    textAlign: 'center',
+                    fontSize: 8,
+                    paddingBottom: 4,
+                    borderRight: '0.5px solid rgba(255,255,255,0.1)',
+                  }}>
+                    {String(hour).padStart(2, '0')}h
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+
+            {/* Reservations as blocks */}
+            {queue.map((r, i) => {
+              const startPercent = (r.startMin / (24 * 60)) * 100;
+              const durationPercent = (r.durationMin / (24 * 60)) * 100;
+              const accentColor = printerColor(printer.hue, 0.65, 0.18);
+              
+              return (
+                <div key={r.id} style={{
+                  display: 'flex',
+                  alignItems: 'stretch',
+                  marginBottom: 8,
+                  height: 72,
+                  position: 'relative',
+                }}>
+                  {/* Timeline container */}
+                  <div style={{
+                    flex: 1,
+                    position: 'relative',
+                    background: 'rgba(255,255,255,0.01)',
+                    border: `0.5px solid ${border}`,
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}>
+                    {/* Hour gridlines */}
+                    {Array.from({ length: 12 }).map((_, hi) => (
+                      <div key={`grid-${hi}`} style={{
+                        position: 'absolute',
+                        left: `${(hi / 12) * 100}%`,
+                        top: 0, bottom: 0,
+                        width: '0.5px',
+                        background: 'rgba(255,255,255,0.05)',
+                      }} />
+                    ))}
+
+                    {/* Reservation block */}
+                    <div style={{
+                      position: 'absolute',
+                      left: `${startPercent}%`,
+                      width: `${durationPercent}%`,
+                      top: 0, bottom: 0,
+                      background: accentColor,
+                      borderRadius: 8,
+                      margin: 6,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      justifyContent: 'center',
+                      padding: '8px 10px',
+                      boxShadow: `0 0 16px ${accentColor}80, inset 0 0 8px ${accentColor}40`,
+                      minWidth: 80,
+                      zIndex: 2,
+                    }}>
+                      {/* Time */}
+                      <div style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: '#fff',
+                        fontVariantNumeric: 'tabular-nums',
+                        lineHeight: 1,
+                        marginBottom: 3,
+                      }}>
+                        {fmtTime(r.startMin)}
+                      </div>
+                      {/* Duration badge */}
+                      <div style={{
+                        fontSize: 9,
+                        color: 'rgba(255,255,255,0.8)',
+                        fontWeight: 500,
+                      }}>
+                        {fmtDuration(r.durationMin)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Info sidebar */}
+                  <div style={{
+                    width: 140,
+                    paddingLeft: 10,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    minWidth: 0,
+                  }}>
+                    <div style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#f5f5f7',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      marginBottom: 3,
+                    }}>
+                      {r.firstName} {r.lastName}
+                    </div>
+                    {r.project && r.project !== 'Impression' && (
+                      <div style={{
+                        fontSize: 10,
+                        color: sub,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        marginBottom: 3,
+                      }}>
+                        {r.project}
+                      </div>
+                    )}
+                    <div style={{
+                      fontSize: 10,
+                      color: 'rgba(255,255,255,0.35)',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      Fin: {fmtTime(r.startMin + r.durationMin)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
     </div>
   );
