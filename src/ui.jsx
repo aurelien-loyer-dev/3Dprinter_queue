@@ -195,6 +195,14 @@ export function GlobalAnims() {
         0%   { background-position: -200% 0; }
         100% { background-position: 200% 0; }
       }
+      @keyframes kiosk-bar {
+        from { width: 0%; }
+        to   { width: 100%; }
+      }
+      @keyframes kiosk-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50%       { opacity: 0.35; transform: scale(0.75); }
+      }
     `}</style>
   );
 }

@@ -566,68 +566,97 @@ function ListView({ t, printerStatus, reservations, me, onPrinterClick, onReserv
 }
 
 function KioskView({ reservations, loading, maintenanceMap = {} }) {
+  const [now, setNow] = React.useState(new Date());
   const [tick, setTick] = React.useState(0);
+  const [lastTickMs, setLastTickMs] = React.useState(Date.now());
+
   React.useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 30_000);
+    const id = setInterval(() => setNow(new Date()), 1_000);
+    return () => clearInterval(id);
+  }, []);
+
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setTick(t => t + 1);
+      setLastTickMs(Date.now());
+    }, 30_000);
     return () => clearInterval(id);
   }, []);
 
   const printerStatus = Object.fromEntries(
     PRINTERS.map(p => [p.id, computePrinterStatus(reservations, p.id)])
   );
-  const printingCount = PRINTERS.filter(p => ['printing', 'soon_available'].includes(printerStatus[p.id].state)).length;
-  const availableCount = PRINTERS.filter(p => ['available', 'soon_unavailable'].includes(printerStatus[p.id].state)).length;
-
-  const [now, setNow] = React.useState(new Date());
-  React.useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(id);
-  }, []);
+  const printingCount  = PRINTERS.filter(p => !maintenanceMap[p.id] && ['printing', 'soon_available'].includes(printerStatus[p.id].state)).length;
+  const availableCount = PRINTERS.filter(p => !maintenanceMap[p.id] && ['available', 'soon_unavailable'].includes(printerStatus[p.id].state)).length;
+  const maintenanceCount = PRINTERS.filter(p => maintenanceMap[p.id]).length;
+  const countdown = Math.max(0, 30 - Math.round((Date.now() - lastTickMs) / 1_000));
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#0a0a0a', color: '#f5f5f7',
+      height: '100vh', background: '#090909', color: '#f5f5f7', overflow: 'hidden',
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif',
       display: 'flex', flexDirection: 'column',
     }}>
-      <div style={{
-        padding: '16px 28px', borderBottom: '0.5px solid rgba(255,255,255,0.08)',
-        display: 'flex', alignItems: 'center', gap: 20,
-        background: 'rgba(10,10,10,0.9)', backdropFilter: 'blur(20px)',
-        position: 'sticky', top: 0, zIndex: 10,
+      {/* Refresh bar */}
+      <div style={{ height: 3, background: '#161616', flexShrink: 0 }}>
+        <div key={tick} style={{
+          height: '100%',
+          background: 'linear-gradient(90deg, oklch(0.6 0.2 220), oklch(0.7 0.2 280))',
+          animation: 'kiosk-bar 30s linear forwards',
+        }} />
+      </div>
+
+      {/* Header */}
+      <header style={{
+        padding: '10px 24px', flexShrink: 0,
+        background: '#0f0f0f', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+        display: 'flex', alignItems: 'center', gap: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 8,
-            background: '#1d1d1f', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Icon name="printer" size={17} color="#fff" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 7, background: '#1d1d1f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="printer" size={15} color="#fff" />
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em' }}>Tek3D</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: -1 }}>Epitech · Atelier impression 3D</div>
+            <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.01em' }}>Tek3D</div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Epitech · Atelier 3D</div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 20, marginLeft: 16, paddingLeft: 16, borderLeft: '0.5px solid rgba(255,255,255,0.1)' }}>
-          <InlineStat dot="oklch(0.72 0.16 50)" label="En impression" value={printingCount} fg="#f5f5f7" sub="rgba(255,255,255,0.45)" />
-          <InlineStat dot="oklch(0.72 0.16 145)" label="Disponibles" value={availableCount} fg="#f5f5f7" sub="rgba(255,255,255,0.45)" />
-          <InlineStat label="Réservations 24h" value={reservations.filter(r => r.startMin + r.durationMin > 0 && r.startMin < 24 * 60).length} fg="#f5f5f7" sub="rgba(255,255,255,0.45)" />
+
+        <div style={{ display: 'flex', gap: 8, marginLeft: 20, paddingLeft: 18, borderLeft: '0.5px solid rgba(255,255,255,0.07)' }}>
+          <KioskChip color="oklch(0.65 0.18 50)"  label="En impression" value={printingCount} />
+          <KioskChip color="oklch(0.65 0.18 145)" label="Disponibles"   value={availableCount} />
+          {maintenanceCount > 0 && <KioskChip color="oklch(0.65 0.18 25)" label="Maintenance" value={maintenanceCount} />}
         </div>
-        <div style={{ flex: 1 }} />
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', fontVariantNumeric: 'tabular-nums' }}>
-          {now.toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+
+        {/* Live clock — centré */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+          <div style={{ fontSize: 34, fontWeight: 200, letterSpacing: '0.06em', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+            {now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3, textTransform: 'capitalize' }}>
+            {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
         </div>
-        <div style={{
-          padding: '4px 10px', borderRadius: 6,
-          background: 'rgba(255,255,255,0.06)', fontSize: 11,
-          color: 'rgba(255,255,255,0.4)', letterSpacing: '0.02em',
-        }}>
-          MODE KIOSQUE
+
+        {/* Live indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ textAlign: 'right', fontSize: 10.5, color: 'rgba(255,255,255,0.25)', lineHeight: 1.5 }}>
+            Prochaine mise à jour<br />
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>dans {countdown}s</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 7, background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.07)' }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'oklch(0.65 0.18 145)', animation: 'kiosk-pulse 2s ease-in-out infinite', flexShrink: 0 }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.08em' }}>EN DIRECT</span>
+          </div>
         </div>
-      </div>
-      <div style={{ flex: 1, padding: '24px 28px 40px', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
+      </header>
+
+      {/* Cards */}
+      <div style={{ flex: 1, padding: '14px 18px 14px', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, minHeight: 0 }}>
         {loading ? (
-          <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'rgba(255,255,255,0.3)', paddingTop: 80 }}>Chargement…</div>
+          <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 16 }}>
+            Chargement…
+          </div>
         ) : PRINTERS.map(p => (
           <KioskPrinterCard key={p.id} printer={p} status={printerStatus[p.id]} reservations={reservations} maintenance={maintenanceMap[p.id] || null} />
         ))}
@@ -636,90 +665,188 @@ function KioskView({ reservations, loading, maintenanceMap = {} }) {
   );
 }
 
+function KioskChip({ color, label, value }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 10px', borderRadius: 7, background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.06)' }}>
+      <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
+      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{label}</span>
+      <span style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+    </div>
+  );
+}
+
+function ArcProgress({ progress, hue, size = 90 }) {
+  const sw = 9;
+  const r = (size - sw) / 2;
+  const circ = 2 * Math.PI * r;
+  const filled = circ * Math.min(1, Math.max(0, progress));
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={sw} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={printerColor(hue, 0.65, 0.17)} strokeWidth={sw}
+        strokeDasharray={`${filled} ${circ}`} strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray 2s ease' }} />
+    </svg>
+  );
+}
+
 function KioskPrinterCard({ printer, status, reservations, maintenance }) {
-  const items = reservations
+  const { NOW_FIXED: _nf } = React.useMemo(() => ({ NOW_FIXED: null }), []);
+  const elapsedMin = (Date.now() - (reservations._nowFixed || 0)) / 60_000;
+
+  const allItems = reservations
     .filter(r => r.printerId === printer.id && r.startMin + r.durationMin > 0 && r.startMin < 24 * 60)
     .sort((a, b) => a.startMin - b.startMin);
+
+  const currentJob = allItems.find(r => r.startMin <= 0 && r.startMin + r.durationMin > 0);
+  const queue = allItems.filter(r => r.startMin > 0).slice(0, 4);
   const load = loadPct(reservations, printer.id);
-  const border = 'rgba(255,255,255,0.08)';
-  const sub = 'rgba(255,255,255,0.5)';
+
+  const effectiveState = maintenance ? 'maintenance' : status.state;
+  const isPrinting = effectiveState === 'printing' || effectiveState === 'soon_available';
+  const isAvailable = effectiveState === 'available';
+  const isSoon = effectiveState === 'soon_unavailable';
+  const isMaint = effectiveState === 'maintenance';
+
+  const accent = isMaint    ? 'oklch(0.5 0.18 25)'
+    : isAvailable || isSoon ? 'oklch(0.6 0.16 145)'
+    : printerColor(printer.hue, 0.58, 0.16);
+
+  const border = 'rgba(255,255,255,0.06)';
+  const sub    = 'rgba(255,255,255,0.4)';
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.04)', border: `0.5px solid ${border}`,
-      borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column',
+      background: '#141414', borderRadius: 14, overflow: 'hidden',
+      border: `0.5px solid ${border}`, borderTop: `3px solid ${accent}`,
+      display: 'flex', flexDirection: 'column', minHeight: 0,
     }}>
-      <div style={{ padding: '16px 18px', borderBottom: `0.5px solid ${border}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+      {/* Header */}
+      <div style={{ padding: '12px 14px 10px', borderBottom: `0.5px solid ${border}`, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ width: 10, height: 10, borderRadius: 3, background: printerColor(printer.hue), flexShrink: 0 }} />
-            <span style={{ fontWeight: 700, fontSize: 16, letterSpacing: '0.01em' }}>{printer.name}</span>
+            <span style={{ fontWeight: 700, fontSize: 18, letterSpacing: '0.01em' }}>{printer.name}</span>
           </div>
-          <StatePill state={maintenance ? 'maintenance' : status.state} compact />
+          <StatePill state={effectiveState} />
         </div>
-        <div style={{ fontSize: 11.5, color: sub, marginBottom: 12 }}>{printer.model}</div>
-        {maintenance ? (
-          <div style={{
-            padding: '8px 10px', borderRadius: 8, marginBottom: 8,
-            background: 'rgba(180,60,30,0.15)', border: '0.5px solid rgba(180,60,30,0.3)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: 'oklch(0.75 0.18 25)', marginBottom: 3 }}>
-              <Icon name="wrench" size={12} />En maintenance
-            </div>
-            <div style={{ fontSize: 11.5, color: 'oklch(0.65 0.14 25)', lineHeight: 1.4 }}>{maintenance.message}</div>
-            {maintenance.return_at && (
-              <div style={{ fontSize: 10.5, color: 'rgba(255,200,180,0.6)', marginTop: 3 }}>
-                Retour {new Date(maintenance.return_at).toLocaleString('fr-FR', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
+        <div style={{ fontSize: 11, color: sub, paddingLeft: 18 }}>{printer.model}</div>
+      </div>
+
+      {/* Status */}
+      <div style={{ padding: '14px', borderBottom: `0.5px solid ${border}`, flexShrink: 0 }}>
+        {isMaint ? (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(160,40,20,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon name="wrench" size={22} color="oklch(0.68 0.18 25)" stroke={1.8} />
               </div>
-            )}
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'oklch(0.72 0.18 25)' }}>En maintenance</div>
+                {maintenance.return_at && (
+                  <div style={{ fontSize: 11, color: sub, marginTop: 2 }}>
+                    Retour {new Date(maintenance.return_at).toLocaleString('fr-FR', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: 'oklch(0.62 0.12 25)', background: 'rgba(160,40,20,0.12)', padding: '7px 10px', borderRadius: 8, lineHeight: 1.4 }}>
+              {maintenance.message}
+            </div>
+          </div>
+        ) : isPrinting ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <ArcProgress progress={status.progress} hue={printer.hue} size={88} />
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 17, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                  {Math.round(status.progress * 100)}%
+                </span>
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+                {fmtRelativeFuture(status.etaMin)}
+              </div>
+              <div style={{ fontSize: 11, color: sub, marginBottom: 8 }}>restant</div>
+              {currentJob && (
+                <>
+                  <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {currentJob.firstName} {currentJob.lastName}
+                  </div>
+                  {currentJob.project && currentJob.project !== 'Impression' && (
+                    <div style={{ fontSize: 11, color: sub, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {currentJob.project}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 11, color: sub, fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>
+                    {fmtTime(currentJob.startMin)} – {fmtTime(currentJob.startMin + currentJob.durationMin)}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        ) : isSoon ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(200,150,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon name="clock" size={24} color="oklch(0.72 0.18 80)" stroke={1.6} />
+            </div>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: 'oklch(0.78 0.18 80)', fontVariantNumeric: 'tabular-nums' }}>
+                {fmtRelativeFuture(status.nextStartMin)}
+              </div>
+              <div style={{ fontSize: 11, color: sub }}>avant la prochaine impression</div>
+            </div>
           </div>
         ) : (
-          <>
-            {(status.state === 'printing' || status.state === 'soon_available') && (
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: sub, marginBottom: 5 }}>
-                  <span style={{ color: '#f5f5f7', fontWeight: 600 }}>{Math.round(status.progress * 100)}%</span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>fin {fmtRelativeFuture(status.etaMin)}</span>
-                </div>
-                <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                  <div style={{ width: `${status.progress * 100}%`, height: '100%', background: printerColor(printer.hue), borderRadius: 999, transition: 'width 0.4s ease' }} />
-                </div>
-              </div>
-            )}
-            {status.state === 'available' && (
-              <div style={{ fontSize: 13, color: 'oklch(0.6 0.16 145)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <Icon name="check" size={13} />Disponible
-              </div>
-            )}
-            {status.state === 'soon_unavailable' && (
-              <div style={{ fontSize: 12, color: 'oklch(0.6 0.16 80)' }}>
-                Impression {fmtRelativeFuture(status.nextStartMin)}
-              </div>
-            )}
-          </>
-        )}
-        <div style={{ marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: sub }}>
-          <span>Charge 24h</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 50, height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-              <div style={{ width: `${load * 100}%`, height: '100%', background: printerColor(printer.hue), borderRadius: 999 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(0,180,80,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon name="check" size={24} color="oklch(0.72 0.18 145)" stroke={2} />
             </div>
-            <span style={{ fontVariantNumeric: 'tabular-nums', color: '#f5f5f7', fontWeight: 600 }}>{Math.round(load * 100)}%</span>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: 'oklch(0.78 0.18 145)' }}>Disponible</div>
+              {queue.length > 0
+                ? <div style={{ fontSize: 11, color: sub }}>Prochain à {fmtTime(queue[0].startMin)}</div>
+                : <div style={{ fontSize: 11, color: sub }}>Aucune réservation à venir</div>
+              }
+            </div>
           </div>
+        )}
+
+        {/* Load bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+          <div style={{ flex: 1, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+            <div style={{ width: `${load * 100}%`, height: '100%', background: accent, borderRadius: 999, transition: 'width 1s ease' }} />
+          </div>
+          <span style={{ fontSize: 10.5, color: sub, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+            {Math.round(load * 100)}%
+          </span>
         </div>
       </div>
-      <div style={{ flex: 1, padding: '10px 14px', overflowY: 'auto', maxHeight: 260 }}>
-        {items.length === 0 ? (
-          <div style={{ fontSize: 12, color: sub, padding: '8px 0' }}>Aucune réservation à venir.</div>
-        ) : items.map(r => (
+
+      {/* Queue */}
+      <div style={{ flex: 1, padding: '10px 12px', overflowY: 'auto', minHeight: 0 }}>
+        {queue.length === 0 ? (
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)', textAlign: 'center', paddingTop: 10 }}>
+            {isMaint ? '' : 'Aucune réservation à venir'}
+          </div>
+        ) : queue.map((r, i) => (
           <div key={r.id} style={{
-            padding: '7px 10px', borderRadius: 8, marginBottom: 5,
-            background: 'rgba(255,255,255,0.03)', border: `0.5px solid ${border}`,
-            borderLeft: `3px solid ${printerColor(printer.hue)}`,
+            display: 'flex', alignItems: 'center', gap: 9,
+            padding: '7px 10px', borderRadius: 8, marginBottom: 4,
+            background: i === 0
+              ? `color-mix(in oklch, ${printerColor(printer.hue)} 9%, rgba(255,255,255,0.02))`
+              : 'rgba(255,255,255,0.025)',
+            border: `0.5px solid ${i === 0 ? `color-mix(in oklch, ${printerColor(printer.hue)} 22%, transparent)` : border}`,
           }}>
-            <div style={{ fontWeight: 600, fontSize: 12 }}>{r.firstName} {r.lastName}</div>
-            <div style={{ fontSize: 11, color: sub, fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>
-              {fmtTime(r.startMin)}–{fmtTime(r.startMin + r.durationMin)}
+            <div style={{ width: 3, alignSelf: 'stretch', borderRadius: 99, background: i === 0 ? printerColor(printer.hue) : 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 12.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {r.firstName} {r.lastName}
+              </div>
+              <div style={{ fontSize: 10.5, color: sub, fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>
+                {fmtTime(r.startMin)} – {fmtTime(r.startMin + r.durationMin)}
+              </div>
             </div>
           </div>
         ))}
