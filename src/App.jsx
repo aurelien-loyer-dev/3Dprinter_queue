@@ -9,6 +9,7 @@ import {
 import {
   getSessionUser, onAuthChange, logoutUser,
   loadReservations, addReservation, deleteReservation, subscribeToReservations,
+  loadMaintenance, subscribeToMaintenance,
 } from './supabase.js';
 import { Icon, Avatar, Btn, GlobalAnims, StatePill } from './ui.jsx';
 import {
@@ -47,6 +48,7 @@ export default function App() {
   const [notif, setNotif] = React.useState(null);
   const [adminPanelOpen, setAdminPanelOpen] = React.useState(false);
   const [statsOpen, setStatsOpen] = React.useState(false);
+  const [maintenanceMap, setMaintenanceMap] = React.useState({});
 
   // Session Supabase — persiste automatiquement entre les refreshs
   React.useEffect(() => {
@@ -58,6 +60,16 @@ export default function App() {
   React.useEffect(() => {
     loadReservations().then(data => { setReservations(data); setLoadingReservations(false); });
     const channel = subscribeToReservations(() => { loadReservations().then(setReservations); });
+    return () => channel.unsubscribe();
+  }, []);
+
+  // Maintenance — chargement + realtime
+  React.useEffect(() => {
+    const refresh = () => loadMaintenance().then(rows =>
+      setMaintenanceMap(Object.fromEntries(rows.map(r => [r.printer_id, r])))
+    );
+    refresh();
+    const channel = subscribeToMaintenance(refresh);
     return () => channel.unsubscribe();
   }, []);
 
@@ -162,7 +174,7 @@ export default function App() {
     return (
       <>
         <GlobalAnims />
-        <KioskView reservations={reservations} loading={loadingReservations} />
+        <KioskView reservations={reservations} loading={loadingReservations} maintenanceMap={maintenanceMap} />
       </>
     );
   }
@@ -355,6 +367,7 @@ export default function App() {
             printerStatus={printerStatus}
             reservations={reservations}
             me={me}
+            maintenanceMap={maintenanceMap}
             onSlotClick={(printerId) => openReserve(printerId)}
             onPrinterClick={(id) => setDetailPrinterId(id)}
             onReserveClick={openReserve}
@@ -458,6 +471,7 @@ export default function App() {
               dark={t.dark}
               reservations={reservations}
               me={me}
+              maintenanceMap={maintenanceMap}
               onReservationDeleted={(id) => setReservations(prev => prev.filter(r => r.id !== id))}
             />
           </div>
@@ -486,7 +500,7 @@ function InlineStat({ dot, label, value, fg, sub }) {
   );
 }
 
-function DashboardView({ t, printerStatus, reservations, me, onSlotClick, onPrinterClick, onReserveClick, onCancel, searchQuery }) {
+function DashboardView({ t, printerStatus, reservations, me, maintenanceMap, onSlotClick, onPrinterClick, onReserveClick, onCancel, searchQuery }) {
   return (
     <div style={{
       display: 'grid',
@@ -501,6 +515,7 @@ function DashboardView({ t, printerStatus, reservations, me, onSlotClick, onPrin
             reservations={reservations}
             allReservations={reservations}
             me={me}
+            maintenance={maintenanceMap[p.id] || null}
             onSlotClick={(printerId, min) => onSlotClick(printerId)}
             onReserve={onReserveClick}
             onCancel={onCancel}
@@ -550,7 +565,7 @@ function ListView({ t, printerStatus, reservations, me, onPrinterClick, onReserv
   );
 }
 
-function KioskView({ reservations, loading }) {
+function KioskView({ reservations, loading, maintenanceMap = {} }) {
   const [tick, setTick] = React.useState(0);
   React.useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 30_000);
@@ -614,14 +629,14 @@ function KioskView({ reservations, loading }) {
         {loading ? (
           <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'rgba(255,255,255,0.3)', paddingTop: 80 }}>Chargement…</div>
         ) : PRINTERS.map(p => (
-          <KioskPrinterCard key={p.id} printer={p} status={printerStatus[p.id]} reservations={reservations} />
+          <KioskPrinterCard key={p.id} printer={p} status={printerStatus[p.id]} reservations={reservations} maintenance={maintenanceMap[p.id] || null} />
         ))}
       </div>
     </div>
   );
 }
 
-function KioskPrinterCard({ printer, status, reservations }) {
+function KioskPrinterCard({ printer, status, reservations, maintenance }) {
   const items = reservations
     .filter(r => r.printerId === printer.id && r.startMin + r.durationMin > 0 && r.startMin < 24 * 60)
     .sort((a, b) => a.startMin - b.startMin);
@@ -640,29 +655,48 @@ function KioskPrinterCard({ printer, status, reservations }) {
             <span style={{ width: 10, height: 10, borderRadius: 3, background: printerColor(printer.hue), flexShrink: 0 }} />
             <span style={{ fontWeight: 700, fontSize: 16, letterSpacing: '0.01em' }}>{printer.name}</span>
           </div>
-          <StatePill state={status.state} compact />
+          <StatePill state={maintenance ? 'maintenance' : status.state} compact />
         </div>
         <div style={{ fontSize: 11.5, color: sub, marginBottom: 12 }}>{printer.model}</div>
-        {(status.state === 'printing' || status.state === 'soon_available') && (
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: sub, marginBottom: 5 }}>
-              <span style={{ color: '#f5f5f7', fontWeight: 600 }}>{Math.round(status.progress * 100)}%</span>
-              <span style={{ fontVariantNumeric: 'tabular-nums' }}>fin {fmtRelativeFuture(status.etaMin)}</span>
+        {maintenance ? (
+          <div style={{
+            padding: '8px 10px', borderRadius: 8, marginBottom: 8,
+            background: 'rgba(180,60,30,0.15)', border: '0.5px solid rgba(180,60,30,0.3)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: 'oklch(0.75 0.18 25)', marginBottom: 3 }}>
+              <Icon name="wrench" size={12} />En maintenance
             </div>
-            <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-              <div style={{ width: `${status.progress * 100}%`, height: '100%', background: printerColor(printer.hue), borderRadius: 999, transition: 'width 0.4s ease' }} />
-            </div>
+            <div style={{ fontSize: 11.5, color: 'oklch(0.65 0.14 25)', lineHeight: 1.4 }}>{maintenance.message}</div>
+            {maintenance.return_at && (
+              <div style={{ fontSize: 10.5, color: 'rgba(255,200,180,0.6)', marginTop: 3 }}>
+                Retour {new Date(maintenance.return_at).toLocaleString('fr-FR', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
           </div>
-        )}
-        {status.state === 'available' && (
-          <div style={{ fontSize: 13, color: 'oklch(0.6 0.16 145)', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <Icon name="check" size={13} />Disponible
-          </div>
-        )}
-        {status.state === 'soon_unavailable' && (
-          <div style={{ fontSize: 12, color: 'oklch(0.6 0.16 80)' }}>
-            Impression {fmtRelativeFuture(status.nextStartMin)}
-          </div>
+        ) : (
+          <>
+            {(status.state === 'printing' || status.state === 'soon_available') && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: sub, marginBottom: 5 }}>
+                  <span style={{ color: '#f5f5f7', fontWeight: 600 }}>{Math.round(status.progress * 100)}%</span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>fin {fmtRelativeFuture(status.etaMin)}</span>
+                </div>
+                <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                  <div style={{ width: `${status.progress * 100}%`, height: '100%', background: printerColor(printer.hue), borderRadius: 999, transition: 'width 0.4s ease' }} />
+                </div>
+              </div>
+            )}
+            {status.state === 'available' && (
+              <div style={{ fontSize: 13, color: 'oklch(0.6 0.16 145)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Icon name="check" size={13} />Disponible
+              </div>
+            )}
+            {status.state === 'soon_unavailable' && (
+              <div style={{ fontSize: 12, color: 'oklch(0.6 0.16 80)' }}>
+                Impression {fmtRelativeFuture(status.nextStartMin)}
+              </div>
+            )}
+          </>
         )}
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: sub }}>
           <span>Charge 24h</span>

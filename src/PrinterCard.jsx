@@ -9,7 +9,7 @@ import {
 import { loadFilamentColors, loadPrinterNotes, addPrinterNote, deletePrinterNote } from './supabase.js';
 import { Icon, Btn, StatePill } from './ui.jsx';
 
-export function PrinterCard({ printer, status, reservations, allReservations, me, onSlotClick, onReserve, onCancel, slotSize, density, dark, searchQuery, hourSpan = 24 }) {
+export function PrinterCard({ printer, status, reservations, allReservations, me, onSlotClick, onReserve, onCancel, slotSize, density, dark, searchQuery, hourSpan = 24, maintenance = null }) {
   const HOURS = hourSpan;
   const PIXELS_PER_HOUR = density === 'compact' ? 36 : density === 'comfy' ? 64 : 48;
   const TIMELINE_HEIGHT = HOURS * PIXELS_PER_HOUR;
@@ -85,13 +85,37 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
               {printer.name}
             </span>
           </div>
-          <StatePill state={status.state} compact />
+          <StatePill state={maintenance ? 'maintenance' : status.state} compact />
         </div>
         <div style={{ fontSize: 11.5, color: subText, marginBottom: 10 }}>
           {printer.model}
         </div>
 
-        {(status.state === 'printing' || status.state === 'soon_available') && (
+        {/* Maintenance banner */}
+        {maintenance && (
+          <div style={{
+            margin: '0 -18px', padding: '10px 18px',
+            background: dark ? 'rgba(180,60,30,0.15)' : 'oklch(0.96 0.04 25)',
+            borderTop: `0.5px solid ${dark ? 'rgba(180,60,30,0.3)' : 'oklch(0.88 0.06 25)'}`,
+            borderBottom: `0.5px solid ${dark ? 'rgba(180,60,30,0.3)' : 'oklch(0.88 0.06 25)'}`,
+            marginBottom: 10,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 600, color: dark ? 'oklch(0.75 0.18 25)' : 'oklch(0.4 0.18 25)', marginBottom: 3 }}>
+              <Icon name="wrench" size={12} />
+              En maintenance
+            </div>
+            <div style={{ fontSize: 11, color: dark ? 'oklch(0.65 0.14 25)' : 'oklch(0.45 0.14 25)', lineHeight: 1.4 }}>
+              {maintenance.message}
+            </div>
+            {maintenance.return_at && (
+              <div style={{ fontSize: 10.5, color: dark ? 'rgba(255,255,255,0.4)' : 'oklch(0.55 0.1 25)', marginTop: 3 }}>
+                Retour estimé {new Date(maintenance.return_at).toLocaleString('fr-FR', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!maintenance && (status.state === 'printing' || status.state === 'soon_available') && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: subText, marginBottom: 5 }}>
               <span style={{ fontVariantNumeric: 'tabular-nums', color: fgText, fontWeight: 500 }}>{Math.round(status.progress * 100)}%</span>
@@ -102,13 +126,13 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
             </div>
           </div>
         )}
-        {status.state === 'available' && (
+        {!maintenance && status.state === 'available' && (
           <div style={{ fontSize: 11.5, color: 'oklch(0.5 0.13 145)', display: 'flex', alignItems: 'center', gap: 5 }}>
             <Icon name="check" size={12} />
             Prête à imprimer
           </div>
         )}
-        {status.state === 'soon_unavailable' && (
+        {!maintenance && status.state === 'soon_unavailable' && (
           <div style={{ fontSize: 11.5, color: 'oklch(0.5 0.14 80)', display: 'flex', alignItems: 'center', gap: 5 }}>
             <Icon name="clock" size={12} />
             Impression {fmtRelativeFuture(status.nextStartMin)}
@@ -245,9 +269,15 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
 
       {/* Reserve CTA */}
       <div style={{ padding: density === 'compact' ? '10px 14px' : '12px 18px', borderBottom: `0.5px solid ${border}` }}>
-        <Btn variant="primary" size="sm" full icon="plus" onClick={() => onReserve(printer.id)}>
-          Réserver — prochain {fmtTime(nextStart)}
-        </Btn>
+        {maintenance ? (
+          <Btn variant="secondary" size="sm" full disabled>
+            Imprimante en maintenance
+          </Btn>
+        ) : (
+          <Btn variant="primary" size="sm" full icon="plus" onClick={() => onReserve(printer.id)}>
+            Réserver — prochain {fmtTime(nextStart)}
+          </Btn>
+        )}
       </div>
 
       {/* Timeline */}
@@ -263,7 +293,7 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
           dark={dark}
           density={density}
           searchQuery={searchQuery}
-          onSlotClick={(min) => onSlotClick && onSlotClick(printer.id, min)}
+          onSlotClick={maintenance ? null : ((min) => onSlotClick && onSlotClick(printer.id, min))}
           onItemCancel={onCancel}
         />
       </div>

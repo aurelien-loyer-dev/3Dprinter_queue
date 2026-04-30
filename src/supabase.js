@@ -237,3 +237,35 @@ export async function deletePrinterNote(id) {
   if (error) { console.error('deletePrinterNote:', error.message); return false; }
   return true;
 }
+
+// ── Maintenance ────────────────────────────────────────────────────────────
+
+export async function loadMaintenance() {
+  const { data, error } = await supabase.from('qp_maintenance').select('*');
+  if (error) { console.error('loadMaintenance:', error.message); return []; }
+  return data || [];
+}
+
+export async function setMaintenance(printerId, message, returnAt, me) {
+  const { error } = await supabase.from('qp_maintenance').upsert({
+    printer_id: printerId,
+    message,
+    return_at: returnAt || null,
+    set_by: me.login,
+  }, { onConflict: 'printer_id' });
+  if (error) { console.error('setMaintenance:', error.message); return false; }
+  return true;
+}
+
+export async function clearMaintenance(printerId) {
+  const { error } = await supabase.from('qp_maintenance').delete().eq('printer_id', printerId);
+  if (error) { console.error('clearMaintenance:', error.message); return false; }
+  return true;
+}
+
+export function subscribeToMaintenance(onRefresh) {
+  return supabase
+    .channel('qp-maintenance-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'qp_maintenance' }, onRefresh)
+    .subscribe();
+}

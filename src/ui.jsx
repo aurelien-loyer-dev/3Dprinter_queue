@@ -78,6 +78,7 @@ export function StatusDot({ state, size = 8, pulse = true }) {
     state === 'soon_available'   ? 'oklch(0.72 0.16 200)' :
     state === 'soon_unavailable' ? 'oklch(0.78 0.16 80)'  :
     state === 'available'        ? 'oklch(0.72 0.16 145)' :
+    state === 'maintenance'      ? 'oklch(0.60 0.18 25)'  :
     'oklch(0.7 0 0)';
   return (
     <span
@@ -108,6 +109,7 @@ export function StatePill({ state, compact = false }) {
     soon_available:   { label: 'Bientôt disponible',   color: 'oklch(0.4 0.14 200)',  bg: 'oklch(0.96 0.03 210)' },
     soon_unavailable: { label: 'Bientôt indisponible', color: 'oklch(0.5 0.14 80)',   bg: 'oklch(0.97 0.04 85)'  },
     available:        { label: 'Disponible',           color: 'oklch(0.4 0.13 145)',  bg: 'oklch(0.96 0.04 145)' },
+    maintenance:      { label: 'En maintenance',       color: 'oklch(0.45 0.18 25)',  bg: 'oklch(0.95 0.05 25)'  },
   };
   const s = map[state] || map.available;
   return (

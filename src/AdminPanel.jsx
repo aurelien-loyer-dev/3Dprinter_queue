@@ -6,10 +6,11 @@ import {
 } from './data.js';
 import {
   loadFilamentColors, addFilamentColor, deleteFilamentColor, deleteReservationAdmin,
+  setMaintenance, clearMaintenance,
 } from './supabase.js';
 import { Icon, Btn } from './ui.jsx';
 
-export function AdminPanel({ dark, reservations, onReservationDeleted, me }) {
+export function AdminPanel({ dark, reservations, onReservationDeleted, me, maintenanceMap = {} }) {
   const [filamentColors, setFilamentColors] = React.useState([]);
   const [newColor, setNewColor] = React.useState({ printerId: PRINTERS[0].id, name: '', hex: '#FF0000' });
   const [loading, setLoading] = React.useState(false);
@@ -90,6 +91,27 @@ export function AdminPanel({ dark, reservations, onReservationDeleted, me }) {
       {/* Content */}
       <main style={{ padding: '24px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+
+          {/* Maintenance Section */}
+          <div style={{ gridColumn: '1/-1' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Mise en maintenance</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+              {PRINTERS.map(printer => (
+                <MaintenanceCard
+                  key={printer.id}
+                  printer={printer}
+                  maintenance={maintenanceMap[printer.id] || null}
+                  me={me}
+                  dark={dark}
+                  border={border}
+                  fg={fg}
+                  sub={sub}
+                  fieldBg={fieldBg}
+                  cardBg={cardBg}
+                />
+              ))}
+            </div>
+          </div>
 
           {/* Filament Colors Section */}
           <div>
@@ -264,6 +286,126 @@ export function AdminPanel({ dark, reservations, onReservationDeleted, me }) {
           </div>
         </div>
       </main>
+    </div>
+  );
+}
+
+function MaintenanceCard({ printer, maintenance, me, dark, border, fg, sub, fieldBg, cardBg }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const [message, setMessage] = React.useState('');
+  const [returnAt, setReturnAt] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+
+  const isActive = !!maintenance;
+
+  const handleSet = async () => {
+    if (!message.trim()) return;
+    setLoading(true);
+    await setMaintenance(printer.id, message.trim(), returnAt || null, me);
+    setExpanded(false);
+    setMessage('');
+    setReturnAt('');
+    setLoading(false);
+  };
+
+  const handleClear = async () => {
+    setLoading(true);
+    await clearMaintenance(printer.id);
+    setLoading(false);
+  };
+
+  const activeBg   = dark ? 'rgba(180,60,30,0.15)' : 'oklch(0.96 0.04 25)';
+  const activeBorder = dark ? 'rgba(180,60,30,0.35)' : 'oklch(0.86 0.07 25)';
+  const activeText = dark ? 'oklch(0.75 0.18 25)' : 'oklch(0.4 0.18 25)';
+  const activeSub  = dark ? 'rgba(255,200,180,0.55)' : 'oklch(0.52 0.12 25)';
+
+  return (
+    <div style={{
+      background: isActive ? activeBg : cardBg,
+      border: `0.5px solid ${isActive ? activeBorder : border}`,
+      borderRadius: 12, padding: 12,
+      transition: 'background 0.2s, border-color 0.2s',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+        <span style={{ width: 8, height: 8, borderRadius: 2, background: printerColor(printer.hue), flexShrink: 0 }} />
+        <span style={{ fontWeight: 600, fontSize: 13, color: isActive ? activeText : fg, flex: 1 }}>{printer.name}</span>
+        {isActive && (
+          <span style={{
+            fontSize: 9.5, fontWeight: 600, padding: '1px 6px', borderRadius: 4,
+            background: dark ? 'rgba(180,60,30,0.3)' : 'oklch(0.90 0.07 25)',
+            color: activeText, letterSpacing: '0.03em',
+          }}>
+            MAINTENANCE
+          </span>
+        )}
+      </div>
+
+      {isActive ? (
+        <>
+          <div style={{ fontSize: 11.5, color: activeText, marginBottom: 3, lineHeight: 1.4 }}>
+            {maintenance.message}
+          </div>
+          {maintenance.return_at && (
+            <div style={{ fontSize: 10.5, color: activeSub, marginBottom: 10 }}>
+              Retour : {new Date(maintenance.return_at).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </div>
+          )}
+          <Btn
+            variant="danger" size="sm" full
+            disabled={loading}
+            onClick={handleClear}
+          >
+            {loading ? '…' : 'Lever la maintenance'}
+          </Btn>
+        </>
+      ) : expanded ? (
+        <>
+          <textarea
+            autoFocus
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            placeholder="Raison (ex: buse bouchée, calibration…)"
+            rows={2}
+            style={{
+              width: '100%', resize: 'none', border: `0.5px solid ${border}`,
+              borderRadius: 6, padding: '6px 8px', fontSize: 11.5,
+              background: fieldBg, color: fg, outline: 'none',
+              boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: 6,
+            }}
+          />
+          <div style={{ fontSize: 10, color: sub, marginBottom: 4 }}>Retour estimé (optionnel)</div>
+          <input
+            type="datetime-local"
+            value={returnAt}
+            onChange={e => setReturnAt(e.target.value)}
+            style={{
+              width: '100%', padding: '6px 8px', borderRadius: 6, border: `0.5px solid ${border}`,
+              background: fieldBg, color: fg, fontSize: 11.5, outline: 'none',
+              boxSizing: 'border-box', marginBottom: 10, fontFamily: 'inherit',
+            }}
+          />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Btn
+              variant="danger" size="sm"
+              disabled={loading || !message.trim()}
+              onClick={handleSet}
+              style={{ flex: 1 }}
+            >
+              {loading ? '…' : 'Mettre en maintenance'}
+            </Btn>
+            <Btn
+              variant="secondary" size="sm"
+              onClick={() => { setExpanded(false); setMessage(''); setReturnAt(''); }}
+            >
+              Annuler
+            </Btn>
+          </div>
+        </>
+      ) : (
+        <Btn variant="secondary" size="sm" full icon="wrench" onClick={() => setExpanded(true)}>
+          Mettre en maintenance
+        </Btn>
+      )}
     </div>
   );
 }
