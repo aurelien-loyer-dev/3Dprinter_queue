@@ -57,6 +57,43 @@ export default function App() {
     return () => channel.unsubscribe();
   }, []);
 
+  // Re-render toutes les 30s pour mettre à jour les progress bars en temps réel
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      // Force re-render — computePrinterStatus recalcule avec Date.now()
+      setReservations(r => [...r]);
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Notifications push — alerte 10 min avant chaque créneau
+  React.useEffect(() => {
+    if (!me || !('Notification' in window)) return;
+
+    if (Notification.permission === 'default') Notification.requestPermission();
+
+    const now = Date.now();
+    const timers = reservations
+      .filter(r => r.login === me.login && r.startMin * 60_000 > now - NOW_FIXED.getTime())
+      .map(r => {
+        const msUntilStart = NOW_FIXED.getTime() + r.startMin * 60_000 - now;
+        const msUntilNotif = msUntilStart - 10 * 60_000;
+        if (msUntilNotif <= 0) return null;
+        return setTimeout(() => {
+          if (Notification.permission === 'granted') {
+            const printer = printerById(r.printerId);
+            new Notification('TEK3D — Créneau dans 10 min 🖨', {
+              body: `${printer.name} · ${r.project} · ${fmtTime(r.startMin)}`,
+              icon: '/favicon.ico',
+            });
+          }
+        }, msUntilNotif);
+      })
+      .filter(Boolean);
+
+    return () => timers.forEach(clearTimeout);
+  }, [me, reservations]);
+
   const handleLogin = (user) => setMe(user);
 
   const handleLogout = async () => {

@@ -23,15 +23,18 @@ export function getNextSlotOffset(slotSize = 30) {
 const SOON_MIN = 30;
 
 export function computePrinterStatus(reservations, printerId) {
+  // Temps écoulé depuis NOW_FIXED en minutes — se met à jour à chaque appel
+  const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
+
   const currentJob = reservations.find(r =>
     r.printerId === printerId &&
-    r.startMin <= 0 &&
-    r.startMin + r.durationMin > 0
+    r.startMin <= elapsedMin &&
+    r.startMin + r.durationMin > elapsedMin
   );
 
   if (currentJob) {
-    const etaMin = currentJob.startMin + currentJob.durationMin;
-    const progress = Math.min(1, (-currentJob.startMin) / currentJob.durationMin);
+    const etaMin = currentJob.startMin + currentJob.durationMin - elapsedMin;
+    const progress = Math.min(1, (elapsedMin - currentJob.startMin) / currentJob.durationMin);
     return {
       state: etaMin <= SOON_MIN ? 'soon_available' : 'printing',
       etaMin,
@@ -40,11 +43,11 @@ export function computePrinterStatus(reservations, printerId) {
   }
 
   const nextJob = reservations
-    .filter(r => r.printerId === printerId && r.startMin > 0)
+    .filter(r => r.printerId === printerId && r.startMin > elapsedMin)
     .sort((a, b) => a.startMin - b.startMin)[0];
 
-  if (nextJob && nextJob.startMin <= SOON_MIN) {
-    return { state: 'soon_unavailable', nextStartMin: nextJob.startMin };
+  if (nextJob && nextJob.startMin - elapsedMin <= SOON_MIN) {
+    return { state: 'soon_unavailable', nextStartMin: nextJob.startMin - elapsedMin };
   }
 
   return { state: 'available' };
