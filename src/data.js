@@ -98,7 +98,7 @@ export function fmtRelativeFuture(min) {
   const h = Math.floor(min / 60);
   const m = Math.round(min % 60);
   if (m === 0) return `${h}h`;
-  return `dans ${h}h${String(m).padStart(2, '0')}`;
+  return `${h}h${String(m).padStart(2, '0')}`;
 }
 
 // ── Printer helpers ────────────────────────────────────────────────────────
