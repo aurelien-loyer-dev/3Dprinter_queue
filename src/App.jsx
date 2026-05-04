@@ -734,6 +734,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
   const WINDOW_H = 10;
   const windowMin = WINDOW_H * 60;
   const PIXELS_PER_HOUR = 64; // fixed px height per hour for kiosk displays
+  const TOTAL_HEIGHT_PX = WINDOW_H * PIXELS_PER_HOUR;
 
   const windowItems = reservations
     .filter(r => r.printerId === printer.id)
@@ -868,26 +869,29 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: '#e05a3a', zIndex: 4 }} />
 
           {/* Repères horaires alignés sur l'horloge murale */}
-          {hourMarkers.map(({ pct, label }) => (
-            <div key={label} style={{ position: 'absolute', top: `${pct}%`, left: 0, right: 0, zIndex: 1 }}>
-              <div style={{ height: 0.5, background: 'rgba(255,255,255,0.10)' }} />
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.32)', padding: '2px 6px', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                {label}
+          {hourMarkers.map(({ pct, label }) => {
+            const topPx = Math.round(pct / 100 * TOTAL_HEIGHT_PX);
+            return (
+              <div key={label} style={{ position: 'absolute', top: `${topPx}px`, left: 0, right: 0, zIndex: 1 }}>
+                <div style={{ height: 0.5, background: 'rgba(255,255,255,0.10)' }} />
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.32)', padding: '2px 6px', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                  {label}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Blocs de réservation — hauteur proportionnelle à la durée */}
-          {windowItems.map(r => {
+            {windowItems.map(r => {
             const visStart  = Math.max(r.startMin, elapsedMin);
             const visEnd    = Math.min(r.startMin + r.durationMin, elapsedMin + windowMin);
-            const topPct    = (visStart - elapsedMin) / windowMin * 100;
-            const heightPct = (visEnd - visStart) / windowMin * 100;
+            const topPx     = Math.round((visStart - elapsedMin) / windowMin * TOTAL_HEIGHT_PX);
+            const heightPx  = Math.round(Math.max((visEnd - visStart) / windowMin * TOTAL_HEIGHT_PX, TOTAL_HEIGHT_PX * 0.025));
             const isLive    = r.startMin <= elapsedMin;
             return (
               <div key={r.id} style={{
                 position: 'absolute',
-                top: `${topPct}%`, height: `${Math.max(heightPct, 2.5)}%`,
+                top: `${topPx}px`, height: `${heightPx}px`,
                 left: 34, right: 4,
                 background: isLive ? ph(printer.hue, 40, 58) : ph(printer.hue, 28, 44),
                 borderLeft: `3px solid ${ph(printer.hue, 60, 72)}`,
