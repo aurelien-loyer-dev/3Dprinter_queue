@@ -600,15 +600,15 @@ function KioskView({ reservations, loading, maintenanceMap = {} }) {
     }}>
       <style>{`
         @keyframes neon-glow {
-          0%, 100% { box-shadow: 0 0 15px oklch(0.7 0.22 280), 0 0 30px oklch(0.6 0.22 280), inset 0 0 12px oklch(0.5 0.22 280); }
-          50% { box-shadow: 0 0 20px oklch(0.75 0.25 280), 0 0 40px oklch(0.65 0.25 280), inset 0 0 15px oklch(0.55 0.25 280); }
+          0%, 100% { box-shadow: 0 0 15px #9055e0, 0 0 30px #7040c0, inset 0 0 12px #5a30a0; }
+          50%       { box-shadow: 0 0 22px #a86af0, 0 0 44px #8050d8, inset 0 0 18px #6840b8; }
         }
       `}</style>
 
       {/* Neon LED Bar */}
-      <div style={{ 
-        height: 24, 
-        background: 'oklch(0.7 0.22 280)',
+      <div style={{
+        height: 22,
+        background: 'linear-gradient(90deg, #7040c0, #9055e0, #a86af0, #9055e0, #7040c0)',
         flexShrink: 0,
         animation: 'neon-glow 2s ease-in-out infinite',
       }} />
@@ -658,7 +658,7 @@ function ArcProgress({ progress, hue, size = 90 }) {
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={sw} />
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={printerColor(hue, 0.65, 0.17)} strokeWidth={sw}
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`hsl(${hue}, 62%, 62%)`} strokeWidth={sw}
         strokeDasharray={`${filled} ${circ}`} strokeLinecap="round"
         style={{ transition: 'stroke-dasharray 2s ease' }} />
     </svg>
@@ -690,9 +690,10 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
   const isSoon = effectiveState === 'soon_unavailable';
   const isMaint = effectiveState === 'maintenance';
 
-  const accent = isMaint    ? 'oklch(0.5 0.18 25)'
-    : isAvailable || isSoon ? 'oklch(0.6 0.16 145)'
-    : printerColor(printer.hue, 0.58, 0.16);
+  const ph = (h, l = 48, s = 55) => `hsl(${h}, ${s}%, ${l}%)`;
+  const accent = isMaint         ? 'hsl(15, 65%, 44%)'
+    : isAvailable || isSoon      ? 'hsl(145, 52%, 46%)'
+    : ph(printer.hue);
 
   const border = 'rgba(255,255,255,0.06)';
   const sub    = 'rgba(255,255,255,0.4)';
@@ -707,7 +708,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
       <div style={{ padding: '12px 14px 10px', borderBottom: `0.5px solid ${border}`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 10, height: 10, borderRadius: 3, background: printerColor(printer.hue), flexShrink: 0 }} />
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: ph(printer.hue), flexShrink: 0 }} />
             <span style={{ fontWeight: 700, fontSize: 18, letterSpacing: '0.01em' }}>{printer.name}</span>
           </div>
           <StatePill state={effectiveState} />
@@ -721,10 +722,10 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(160,40,20,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Icon name="wrench" size={22} color="oklch(0.68 0.18 25)" stroke={1.8} />
+                <Icon name="wrench" size={22} color="hsl(15, 68%, 56%)" stroke={1.8} />
               </div>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'oklch(0.72 0.18 25)' }}>En maintenance</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'hsl(15, 68%, 60%)' }}>En maintenance</div>
                 {maintenance.return_at && (
                   <div style={{ fontSize: 11, color: sub, marginTop: 2 }}>
                     Retour {new Date(maintenance.return_at).toLocaleString('fr-FR', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -732,7 +733,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
                 )}
               </div>
             </div>
-            <div style={{ fontSize: 12, color: 'oklch(0.62 0.12 25)', background: 'rgba(160,40,20,0.12)', padding: '7px 10px', borderRadius: 8, lineHeight: 1.4 }}>
+            <div style={{ fontSize: 12, color: 'hsl(15, 50%, 54%)', background: 'rgba(160,40,20,0.12)', padding: '7px 10px', borderRadius: 8, lineHeight: 1.4 }}>
               {maintenance.message}
             </div>
           </div>
@@ -771,10 +772,10 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
         ) : isSoon ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(200,150,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Icon name="clock" size={24} color="oklch(0.72 0.18 80)" stroke={1.6} />
+              <Icon name="clock" size={24} color="hsl(42, 82%, 58%)" stroke={1.6} />
             </div>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: 'oklch(0.78 0.18 80)', fontVariantNumeric: 'tabular-nums' }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: 'hsl(42, 88%, 62%)', fontVariantNumeric: 'tabular-nums' }}>
                 {fmtRelativeFuture(status.nextStartMin)}
               </div>
               <div style={{ fontSize: 11, color: sub }}>avant la prochaine impression</div>
@@ -783,10 +784,10 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(0,180,80,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Icon name="check" size={24} color="oklch(0.72 0.18 145)" stroke={2} />
+              <Icon name="check" size={24} color="hsl(145, 62%, 56%)" stroke={2} />
             </div>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: 'oklch(0.78 0.18 145)' }}>Disponible</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: 'hsl(145, 68%, 60%)' }}>Disponible</div>
               {queue.length > 0
                 ? <div style={{ fontSize: 11, color: sub }}>Prochain à {fmtTime(queue[0].startMin)}</div>
                 : <div style={{ fontSize: 11, color: sub }}>Aucune réservation à venir</div>
@@ -882,7 +883,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
             {queue.map((r, i) => {
               const startPercent = (r.startMin / (24 * 60)) * 100;
               const durationPercent = (r.durationMin / (24 * 60)) * 100;
-              const accentColor = printerColor(printer.hue, 0.65, 0.18);
+              const accentColor = ph(printer.hue, 52, 62);
               
               return (
                 <div key={r.id} style={{

@@ -74,12 +74,12 @@ export function Avatar({ first, last, size = 28, hue }) {
 
 export function StatusDot({ state, size = 8, pulse = true }) {
   const color =
-    state === 'printing'         ? 'oklch(0.72 0.16 50)'  :
-    state === 'soon_available'   ? 'oklch(0.72 0.16 200)' :
-    state === 'soon_unavailable' ? 'oklch(0.78 0.16 80)'  :
-    state === 'available'        ? 'oklch(0.72 0.16 145)' :
-    state === 'maintenance'      ? 'oklch(0.60 0.18 25)'  :
-    'oklch(0.7 0 0)';
+    state === 'printing'         ? 'hsl(35, 75%, 58%)'  :
+    state === 'soon_available'   ? 'hsl(210, 65%, 62%)' :
+    state === 'soon_unavailable' ? 'hsl(45, 68%, 60%)'  :
+    state === 'available'        ? 'hsl(145, 55%, 55%)' :
+    state === 'maintenance'      ? 'hsl(15, 68%, 58%)'  :
+    '#888';
   return (
     <span
       style={{
@@ -105,11 +105,11 @@ export function StatusDot({ state, size = 8, pulse = true }) {
 
 export function StatePill({ state, compact = false }) {
   const map = {
-    printing:         { label: 'En impression',        color: 'oklch(0.55 0.15 50)',  bg: 'oklch(0.97 0.04 60)'  },
-    soon_available:   { label: 'Bientôt disponible',   color: 'oklch(0.4 0.14 200)',  bg: 'oklch(0.96 0.03 210)' },
-    soon_unavailable: { label: 'Bientôt indisponible', color: 'oklch(0.5 0.14 80)',   bg: 'oklch(0.97 0.04 85)'  },
-    available:        { label: 'Disponible',           color: 'oklch(0.4 0.13 145)',  bg: 'oklch(0.96 0.04 145)' },
-    maintenance:      { label: 'En maintenance',       color: 'oklch(0.45 0.18 25)',  bg: 'oklch(0.95 0.05 25)'  },
+    printing:         { label: 'En impression',        color: 'hsl(35, 72%, 36%)',  bg: 'hsl(40, 80%, 94%)'  },
+    soon_available:   { label: 'Bientôt disponible',   color: 'hsl(210, 58%, 36%)', bg: 'hsl(210, 55%, 94%)' },
+    soon_unavailable: { label: 'Bientôt indisponible', color: 'hsl(45, 62%, 36%)',  bg: 'hsl(50, 68%, 93%)'  },
+    available:        { label: 'Disponible',           color: 'hsl(145, 50%, 30%)', bg: 'hsl(145, 42%, 93%)' },
+    maintenance:      { label: 'En maintenance',       color: 'hsl(15, 62%, 38%)',  bg: 'hsl(15, 55%, 93%)'  },
   };
   const s = map[state] || map.available;
   return (

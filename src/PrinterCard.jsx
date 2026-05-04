@@ -152,14 +152,23 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
         {filamentColors.length > 0 && (
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${border}` }}>
             <div style={{ fontSize: 10, color: subText, marginBottom: 6, fontWeight: 500 }}>Filaments disponibles</div>
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
               {filamentColors.map(color => (
                 <div key={color.id} style={{
-                  width: 20, height: 20, borderRadius: 4,
-                  background: color.hex_color,
-                  border: `1px solid ${border}`,
-                  cursor: 'default',
-                }} title={color.color_name} />
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 7,
+                    background: color.hex_color,
+                    border: `1.5px solid ${border}`,
+                    boxShadow: `0 2px 6px ${color.hex_color}55`,
+                  }} />
+                  <span style={{
+                    fontSize: 9, color: subText, maxWidth: 36,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    textAlign: 'center',
+                  }}>{color.color_name}</span>
+                </div>
               ))}
             </div>
           </div>

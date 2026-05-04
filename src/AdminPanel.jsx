@@ -88,7 +88,7 @@ export function AdminPanel({ dark, reservations, onReservationDeleted, me, maint
         </div>
         <div style={{ flex: 1 }} />
         <button
-          onClick={() => window.open(window.location.origin + window.location.pathname + '?kiosk=1', '_blank')}
+          onClick={() => window.open(window.location.origin + '?kiosk=1', '_blank')}
           style={{
             display: 'flex', alignItems: 'center', gap: 7,
             padding: '0 14px', height: 34, borderRadius: 9,
