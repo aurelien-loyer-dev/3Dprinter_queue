@@ -175,11 +175,11 @@ export async function deleteReservation(id) {
   return !error;
 }
 
-export function subscribeToReservations(onRefresh) {
+export function subscribeToReservations(onRefresh, onStatus) {
   return supabase
     .channel('qp-reservations-live')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'qp_reservations' }, onRefresh)
-    .subscribe();
+    .subscribe(onStatus ?? (() => {}));
 }
 
 // ── Admin — Filament colors ────────────────────────────────────────────────

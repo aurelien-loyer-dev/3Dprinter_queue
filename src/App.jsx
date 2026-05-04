@@ -58,6 +58,7 @@ export default function App() {
   const [adminPanelOpen, setAdminPanelOpen] = React.useState(false);
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [maintenanceMap, setMaintenanceMap] = React.useState({});
+  const [wsStatus, setWsStatus] = React.useState('connecting'); // 'connecting' | 'connected' | 'error'
 
   // Session Supabase — persiste automatiquement entre les refreshs
   React.useEffect(() => {
@@ -65,10 +66,18 @@ export default function App() {
     return onAuthChange(user => { setMe(user); setAuthLoading(false); });
   }, []);
 
-  // Chargement réservations + realtime
+  // Chargement réservations + realtime WebSocket
   React.useEffect(() => {
     loadReservations().then(data => { setReservations(data); setLoadingReservations(false); });
-    const channel = subscribeToReservations(() => { loadReservations().then(setReservations); });
+    const channel = subscribeToReservations(
+      () => { loadReservations().then(setReservations); },
+      (status) => {
+        if (status === 'SUBSCRIBED')     setWsStatus('connected');
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED')
+          setWsStatus('error');
+        else setWsStatus('connecting');
+      }
+    );
     return () => channel.unsubscribe();
   }, []);
 
@@ -183,7 +192,7 @@ export default function App() {
     return (
       <>
         <GlobalAnims />
-        <KioskView reservations={reservations} loading={loadingReservations} maintenanceMap={maintenanceMap} />
+        <KioskView reservations={reservations} loading={loadingReservations} maintenanceMap={maintenanceMap} wsStatus={wsStatus} />
       </>
     );
   }
@@ -574,7 +583,7 @@ function ListView({ t, printerStatus, reservations, me, onPrinterClick, onReserv
   );
 }
 
-function KioskView({ reservations, loading, maintenanceMap = {} }) {
+function KioskView({ reservations, loading, maintenanceMap = {}, wsStatus = 'connecting' }) {
   const [now, setNow] = React.useState(new Date());
   const [tick, setTick] = React.useState(0);
   const [lastTickMs, setLastTickMs] = React.useState(Date.now());
@@ -621,16 +630,25 @@ function KioskView({ reservations, loading, maintenanceMap = {} }) {
         animation: 'neon-glow 2s ease-in-out infinite',
       }} />
 
-      {/* Simple time header */}
+      {/* Header */}
       <header style={{
-        padding: '8px 24px', flexShrink: 0,
+        padding: '8px 28px', flexShrink: 0,
         background: '#0f0f0f', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex', alignItems: 'center',
       }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        {/* WS status — gauche */}
+        <WsIndicator status={wsStatus} />
+
+        {/* Heure — centre */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
           <div style={{ fontSize: 48, fontWeight: 200, letterSpacing: '0.06em', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
             {now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
           </div>
+        </div>
+
+        {/* Date — droite */}
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', textTransform: 'capitalize', textAlign: 'right' }}>
+          {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </div>
       </header>
 
@@ -644,6 +662,51 @@ function KioskView({ reservations, loading, maintenanceMap = {} }) {
           <KioskPrinterCard key={p.id} printer={p} status={printerStatus[p.id]} reservations={reservations} maintenance={maintenanceMap[p.id] || null} />
         ))}
       </div>
+    </div>
+  );
+}
+
+function WsIndicator({ status }) {
+  const [flash, setFlash] = React.useState(false);
+  const prevStatus = React.useRef(status);
+
+  React.useEffect(() => {
+    if (prevStatus.current !== 'connected' && status === 'connected') {
+      setFlash(true);
+      const t = setTimeout(() => setFlash(false), 800);
+      return () => clearTimeout(t);
+    }
+    prevStatus.current = status;
+  }, [status]);
+
+  const dot =
+    status === 'connected'   ? '#44c76a' :
+    status === 'error'       ? '#e05a3a' :
+    '#d4a030';
+
+  const label =
+    status === 'connected'   ? 'Connecté' :
+    status === 'error'       ? 'Déconnecté' :
+    'Connexion…';
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '6px 12px', borderRadius: 8,
+      background: flash ? `${dot}22` : 'rgba(255,255,255,0.04)',
+      border: `0.5px solid ${flash ? dot : 'rgba(255,255,255,0.08)'}`,
+      transition: 'background 0.3s, border-color 0.3s',
+    }}>
+      <span style={{
+        width: 8, height: 8, borderRadius: '50%',
+        background: dot,
+        boxShadow: status === 'connected' ? `0 0 6px ${dot}` : 'none',
+        animation: status === 'connecting' ? 'kiosk-pulse 1.4s ease-in-out infinite' : 'none',
+        flexShrink: 0,
+      }} />
+      <span style={{ fontSize: 11.5, fontWeight: 500, color: 'rgba(255,255,255,0.55)', whiteSpace: 'nowrap' }}>
+        {label}
+      </span>
     </div>
   );
 }
