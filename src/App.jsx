@@ -863,18 +863,18 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
 
       {/* Timeline verticale proportionnelle */}
       <div style={{ position: 'relative', margin: '6px 8px 8px', height: `${WINDOW_H * PIXELS_PER_HOUR}px`, overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.02)', borderRadius: 8, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.02)', borderRadius: 8, overflow: 'hidden' }}>
 
           {/* Ligne NOW (haut = maintenant) */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: '#e05a3a', zIndex: 4 }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: '#e05a3a', zIndex: 4 }} />
 
           {/* Repères horaires alignés sur l'horloge murale */}
           {hourMarkers.map(({ pct, label }) => {
             const topPx = Math.round(pct / 100 * TOTAL_HEIGHT_PX);
             return (
-              <div key={label} style={{ position: 'absolute', top: `${topPx}px`, left: 0, right: 0, zIndex: 1 }}>
-                <div style={{ height: 0.5, background: 'rgba(255,255,255,0.10)' }} />
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.32)', padding: '2px 6px', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+              <div key={label} style={{ position: 'absolute', top: `${topPx}px`, left: 0, right: 0, zIndex: 2 }}>
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.14)' }} />
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.36)', padding: '3px 6px', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
                   {label}
                 </div>
               </div>
@@ -886,12 +886,14 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
             const visStart  = Math.max(r.startMin, elapsedMin);
             const visEnd    = Math.min(r.startMin + r.durationMin, elapsedMin + windowMin);
             const topPx     = Math.round((visStart - elapsedMin) / windowMin * TOTAL_HEIGHT_PX);
-            const heightPx  = Math.round(Math.max((visEnd - visStart) / windowMin * TOTAL_HEIGHT_PX, TOTAL_HEIGHT_PX * 0.025));
+            const heightPx  = Math.round((visEnd - visStart) / windowMin * TOTAL_HEIGHT_PX);
+            const minHeight = 20; // px — ensure visible on TV browsers
+            const finalHeight = Math.max(heightPx, minHeight);
             const isLive    = r.startMin <= elapsedMin;
             return (
               <div key={r.id} style={{
                 position: 'absolute',
-                top: `${topPx}px`, height: `${heightPx}px`,
+                top: `${topPx}px`, height: `${finalHeight}px`,
                 left: 34, right: 4,
                 background: isLive ? ph(printer.hue, 40, 58) : ph(printer.hue, 28, 44),
                 borderLeft: `3px solid ${ph(printer.hue, 60, 72)}`,
