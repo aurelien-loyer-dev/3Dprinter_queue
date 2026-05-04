@@ -341,18 +341,18 @@ function Timeline({ hours, pixelsPerHour, slotSize, items, printer, status, me, 
       </div>
 
       {/* Lanes */}
-      <div style={{ flex: 1, position: 'relative', height: TIMELINE_HEIGHT, marginRight: 12 }}>
+      <div style={{ position: 'relative', width: '100%', height: `${TIMELINE_HEIGHT}px`, marginRight: 12 }}>
         {/* Hour grid lines */}
         {Array.from({ length: hours + 1 }).map((_, i) => (
           <div key={`h-${i}`} style={{
-            position: 'absolute', top: i * pixelsPerHour, left: 0, right: 0,
+            position: 'absolute', top: `${i * pixelsPerHour}px`, left: 0, right: 0,
             height: 0.5, background: hourLine,
           }} />
         ))}
         {/* Slot dividers */}
         {Array.from({ length: totalSlots }).map((_, i) => i % slotsPerHour === 0 ? null : (
           <div key={`s-${i}`} style={{
-            position: 'absolute', top: i * slotHeight, left: 0, right: 0,
+            position: 'absolute', top: `${i * slotHeight}px`, left: 0, right: 0,
             height: 0.5, background: slotLine,
           }} />
         ))}
@@ -382,7 +382,7 @@ function Timeline({ hours, pixelsPerHour, slotSize, items, printer, status, me, 
               onClick={() => onSlotClick(slotStart)}
               style={{
                 position: 'absolute',
-                top: i * slotHeight, left: 0, right: 0, height: slotHeight,
+                top: `${i * slotHeight}px`, left: 0, right: 0, height: `${slotHeight}px`,
                 cursor: 'pointer',
                 transition: 'background 0.12s ease',
               }}
@@ -397,8 +397,8 @@ function Timeline({ hours, pixelsPerHour, slotSize, items, printer, status, me, 
         {items.map(r => {
           const visStart = Math.max(0, r.startMin);
           const visEnd = Math.min(hours * 60, r.startMin + r.durationMin);
-          const top = (visStart / 60) * pixelsPerHour;
-          const height = ((visEnd - visStart) / 60) * pixelsPerHour;
+          const top = `${(visStart / 60) * pixelsPerHour}px`;
+          const height = `${((visEnd - visStart) / 60) * pixelsPerHour}px`;
           const isMine = r.login === me.login;
           const isLive = r.startMin <= 0 && r.startMin + r.durationMin > 0;
           const matchesSearch = searchQuery && (
@@ -453,7 +453,7 @@ function ReservationBlock({ r, top, height, hue, isMine, isLive, dark, dimmed, h
       style={{
         position: 'absolute',
         top, left: 4, right: 4,
-        height: Math.max(height, 18),
+        height: `calc(max(${height}, 18px))`,
         background: bg,
         border: `0.5px solid ${highlighted ? 'oklch(0.6 0.2 50)' : borderColor}`,
         borderLeft: `3px solid ${printerColor(hue)}`,
@@ -479,22 +479,23 @@ function ReservationBlock({ r, top, height, hue, isMine, isLive, dark, dimmed, h
           fontWeight: 600, letterSpacing: '0.005em',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           minWidth: 0,
+          fontSize: compact ? 9.5 : 10,
         }}>
           {r.firstName} {r.lastName}
         </span>
         {!compact && (
-          <span style={{ fontSize: 10, opacity: 0.65, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+          <span style={{ fontSize: 9, opacity: 0.65, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
             {fmtDuration(r.durationMin)}
           </span>
         )}
       </div>
       {!compact && (
         <div style={{
-          fontSize: 10, opacity: 0.7, fontVariantNumeric: 'tabular-nums',
+          fontSize: 14, opacity: 0.85, fontVariantNumeric: 'tabular-nums', fontWeight: 600,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>
           {fmtTime(r.startMin)}–{fmtTime(r.startMin + r.durationMin)}
-          {isLive && <span style={{ marginLeft: 6, color: 'oklch(0.55 0.18 25)', fontWeight: 600 }}>● en cours</span>}
+          {isLive && <span style={{ marginLeft: 6, color: 'oklch(0.55 0.18 25)', fontWeight: 700 }}>● en cours</span>}
         </div>
       )}
       {isMine && hover && onCancel && (
