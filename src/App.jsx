@@ -203,7 +203,7 @@ export default function App() {
     return (
       <>
         <GlobalAnims />
-        <KioskView reservations={reservations} loading={loadingReservations} maintenanceMap={maintenanceMap} wsStatus={wsStatus} />
+        <KioskView reservations={reservations} loading={loadingReservations} maintenanceMap={maintenanceMap} wsStatus={wsStatus} filamentColors={filamentColors} />
       </>
     );
   }
@@ -594,7 +594,7 @@ function ListView({ t, printerStatus, reservations, me, onPrinterClick, onReserv
   );
 }
 
-function KioskView({ reservations, loading, maintenanceMap = {}, wsStatus = 'connecting' }) {
+function KioskView({ reservations, loading, maintenanceMap = {}, wsStatus = 'connecting', filamentColors = [] }) {
   const [now, setNow] = React.useState(new Date());
   const [tick, setTick] = React.useState(0);
   const [lastTickMs, setLastTickMs] = React.useState(Date.now());
