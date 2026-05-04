@@ -733,6 +733,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
   const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
   const WINDOW_H = 10;
   const windowMin = WINDOW_H * 60;
+  const PIXELS_PER_HOUR = 64; // fixed px height per hour for kiosk displays
 
   const windowItems = reservations
     .filter(r => r.printerId === printer.id)
@@ -860,7 +861,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
       </div>
 
       {/* Timeline verticale proportionnelle */}
-      <div style={{ flex: 1, position: 'relative', margin: '6px 8px 8px', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', margin: '6px 8px 8px', height: `${WINDOW_H * PIXELS_PER_HOUR}px`, overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.02)', borderRadius: 8, overflow: 'hidden' }}>
 
           {/* Ligne NOW (haut = maintenant) */}
