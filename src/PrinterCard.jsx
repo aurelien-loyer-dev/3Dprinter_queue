@@ -160,24 +160,14 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
         {filamentColors.length > 0 && (
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${border}` }}>
             <div style={{ fontSize: 10, color: subText, marginBottom: 6, fontWeight: 500 }}>Filaments disponibles</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {filamentColors.map(color => (
-                <div key={color.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '7px 10px', borderRadius: 10,
-                  background: `${color.hex_color}22`,
-                  border: `1px solid ${color.hex_color}55`,
-                }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-                    background: color.hex_color,
-                    border: swatchBorder(color.hex_color),
-                    boxShadow: `0 2px 8px ${color.hex_color}66`,
-                  }} />
-                  <span style={{
-                    fontSize: 12.5, fontWeight: 600, color: fgText,
-                  }}>{color.color_name}</span>
-                </div>
+                <div key={color.id} title={color.color_name} style={{
+                  width: 28, height: 28, borderRadius: 7,
+                  background: color.hex_color,
+                  border: swatchBorder(color.hex_color),
+                  boxShadow: `0 2px 6px ${color.hex_color}55`,
+                }} />
               ))}
             </div>
           </div>
