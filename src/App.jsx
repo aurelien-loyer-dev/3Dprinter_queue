@@ -1,6 +1,22 @@
 // App.jsx — main shell
 import React from 'react';
 
+// Fusionne le statut basé sur les réservations avec la télémétrie réelle du bridge
+function mergePrinterStatus(resStatus, tel) {
+  if (!tel) return resStatus;
+  if (Date.now() - new Date(tel.updated_at).getTime() > 120_000) return resStatus; // trop vieux
+  if (tel.state === 'printing') return {
+    state: 'printing',
+    progress: Math.min(1, (tel.progress || 0) / 100),
+    etaMin: tel.remaining_min ?? resStatus.etaMin,
+    fromTelemetry: true,
+  };
+  if (tel.state === 'paused')  return { state: 'paused',  fromTelemetry: true };
+  if (tel.state === 'error')   return { state: 'error',   fromTelemetry: true };
+  if (tel.state === 'offline') return { state: 'offline', fromTelemetry: true };
+  return resStatus; // idle → on garde le planning
+}
+
 function swatchBorder(hex) {
   const r = parseInt(hex.slice(1, 3), 16) || 0;
   const g = parseInt(hex.slice(3, 5), 16) || 0;
@@ -19,6 +35,7 @@ import {
   loadReservations, addReservation, deleteReservation, subscribeToReservations,
   loadMaintenance, subscribeToMaintenance,
   loadFilamentColors, subscribeToFilamentColors,
+  loadPrinterTelemetry, subscribeToPrinterTelemetry,
 } from './supabase.js';
 import { Icon, Avatar, Btn, GlobalAnims, StatePill } from './ui.jsx';
 import {
@@ -59,7 +76,8 @@ export default function App() {
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [maintenanceMap, setMaintenanceMap] = React.useState({});
   const [filamentColors, setFilamentColors] = React.useState([]);
-  const [wsStatus, setWsStatus] = React.useState('connecting'); // 'connecting' | 'connected' | 'error'
+  const [wsStatus, setWsStatus] = React.useState('connecting');
+  const [telemetryMap, setTelemetryMap] = React.useState({});
 
   // Session Supabase — persiste automatiquement entre les refreshs
   React.useEffect(() => {
@@ -96,6 +114,14 @@ export default function App() {
   React.useEffect(() => {
     loadFilamentColors().then(setFilamentColors);
     const channel = subscribeToFilamentColors(() => loadFilamentColors().then(setFilamentColors));
+    return () => channel.unsubscribe();
+  }, []);
+
+  // Télémétrie Bambu Lab — poussée par le bridge Python
+  React.useEffect(() => {
+    const refresh = () => loadPrinterTelemetry().then(setTelemetryMap);
+    refresh();
+    const channel = subscribeToPrinterTelemetry(refresh);
     return () => channel.unsubscribe();
   }, []);
 
@@ -203,7 +229,7 @@ export default function App() {
     return (
       <>
         <GlobalAnims />
-        <KioskView reservations={reservations} loading={loadingReservations} maintenanceMap={maintenanceMap} wsStatus={wsStatus} filamentColors={filamentColors} />
+        <KioskView reservations={reservations} loading={loadingReservations} maintenanceMap={maintenanceMap} wsStatus={wsStatus} telemetryMap={telemetryMap} />
       </>
     );
   }
@@ -250,7 +276,10 @@ export default function App() {
   const fieldBg = t.dark ? 'rgba(255,255,255,0.04)' : '#ffffff';
 
   const printerStatus = Object.fromEntries(
-    PRINTERS.map(p => [p.id, computePrinterStatus(reservations, p.id)])
+    PRINTERS.map(p => [p.id, mergePrinterStatus(
+      computePrinterStatus(reservations, p.id),
+      telemetryMap[p.id]
+    )])
   );
 
   const myUpcomingCount = reservations.filter(r => r.login === me.login && r.startMin + r.durationMin > 0).length;
@@ -397,6 +426,7 @@ export default function App() {
             reservations={reservations}
             me={me}
             maintenanceMap={maintenanceMap}
+            telemetryMap={telemetryMap}
             onSlotClick={(printerId) => openReserve(printerId)}
             onPrinterClick={(id) => setDetailPrinterId(id)}
             onReserveClick={openReserve}
@@ -529,7 +559,7 @@ function InlineStat({ dot, label, value, fg, sub }) {
   );
 }
 
-function DashboardView({ t, printerStatus, reservations, me, maintenanceMap, onSlotClick, onPrinterClick, onReserveClick, onCancel, searchQuery }) {
+function DashboardView({ t, printerStatus, reservations, me, maintenanceMap, telemetryMap, onSlotClick, onPrinterClick, onReserveClick, onCancel, searchQuery }) {
   return (
     <div style={{
       display: 'grid',
@@ -545,6 +575,7 @@ function DashboardView({ t, printerStatus, reservations, me, maintenanceMap, onS
             allReservations={reservations}
             me={me}
             maintenance={maintenanceMap[p.id] || null}
+            telemetry={telemetryMap[p.id] || null}
             onSlotClick={(printerId, min) => onSlotClick(printerId)}
             onReserve={onReserveClick}
             onCancel={onCancel}
@@ -594,7 +625,7 @@ function ListView({ t, printerStatus, reservations, me, onPrinterClick, onReserv
   );
 }
 
-function KioskView({ reservations, loading, maintenanceMap = {}, wsStatus = 'connecting', filamentColors = [] }) {
+function KioskView({ reservations, loading, maintenanceMap = {}, wsStatus = 'connecting', telemetryMap = {} }) {
   const [now, setNow] = React.useState(new Date());
   const [tick, setTick] = React.useState(0);
   const [lastTickMs, setLastTickMs] = React.useState(Date.now());
@@ -655,7 +686,12 @@ function KioskView({ reservations, loading, maintenanceMap = {}, wsStatus = 'con
             Chargement…
           </div>
         ) : PRINTERS.map(p => (
-          <KioskPrinterCard key={p.id} printer={p} status={printerStatus[p.id]} reservations={reservations} maintenance={maintenanceMap[p.id] || null} filamentColors={filamentColors} />
+          <KioskPrinterCard key={p.id} printer={p}
+            status={mergePrinterStatus(printerStatus[p.id], telemetryMap[p.id])}
+            reservations={reservations}
+            maintenance={maintenanceMap[p.id] || null}
+            telemetry={telemetryMap[p.id] || null}
+          />
         ))}
       </div>
     </div>
@@ -732,8 +768,21 @@ function ArcProgress({ progress, hue, size = 90 }) {
   );
 }
 
-function KioskPrinterCard({ printer, status, reservations, maintenance, filamentColors = [] }) {
-  const printerFilaments = filamentColors.filter(c => c.printer_id === printer.id);
+function KioskPrinterCard({ printer, status, reservations, maintenance, telemetry }) {
+  const [dbColors, setDbColors] = React.useState([]);
+  React.useEffect(() => {
+    loadFilamentColors().then(cs => setDbColors(cs.filter(c => c.printer_id === printer.id)));
+  }, [printer.id]);
+
+  // Couleurs AMS réelles (bridge) prioritaires sur les couleurs manuelles
+  const printerFilaments = React.useMemo(() => {
+    if (telemetry?.ams_colors) {
+      try {
+        return JSON.parse(telemetry.ams_colors).map((hex, i) => ({ id: `ams-${i}`, hex_color: hex }));
+      } catch { /* fall through */ }
+    }
+    return dbColors;
+  }, [telemetry?.ams_colors, dbColors]);
 
   const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
   const WINDOW_H = 10;

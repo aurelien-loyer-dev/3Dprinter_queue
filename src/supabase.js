@@ -276,3 +276,18 @@ export function subscribeToMaintenance(onRefresh) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'qp_maintenance' }, onRefresh)
     .subscribe();
 }
+
+// ── Télémétrie Bambu Lab ───────────────────────────────────────────────────
+
+export async function loadPrinterTelemetry() {
+  const { data, error } = await supabase.from('qp_printer_telemetry').select('*');
+  if (error) { console.error('loadPrinterTelemetry:', error.message); return {}; }
+  return Object.fromEntries((data || []).map(r => [r.printer_id, r]));
+}
+
+export function subscribeToPrinterTelemetry(onRefresh) {
+  return supabase
+    .channel('qp-telemetry-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'qp_printer_telemetry' }, onRefresh)
+    .subscribe();
+}

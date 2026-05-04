@@ -17,24 +17,32 @@ import {
 import { loadFilamentColors, loadPrinterNotes, addPrinterNote, deletePrinterNote } from './supabase.js';
 import { Icon, Btn, StatePill } from './ui.jsx';
 
-export function PrinterCard({ printer, status, reservations, allReservations, me, onSlotClick, onReserve, onCancel, slotSize, density, dark, searchQuery, hourSpan = 24, maintenance = null }) {
+export function PrinterCard({ printer, status, reservations, allReservations, me, onSlotClick, onReserve, onCancel, slotSize, density, dark, searchQuery, hourSpan = 24, maintenance = null, telemetry = null }) {
   const HOURS = hourSpan;
   const PIXELS_PER_HOUR = density === 'compact' ? 36 : density === 'comfy' ? 64 : 48;
   const TIMELINE_HEIGHT = HOURS * PIXELS_PER_HOUR;
   const slotOffset = getNextSlotOffset(slotSize);
 
-  const [filamentColors, setFilamentColors] = React.useState([]);
+  const [dbFilamentColors, setDbFilamentColors] = React.useState([]);
   const [notes, setNotes] = React.useState([]);
   const [noteInput, setNoteInput] = React.useState('');
   const [showNoteInput, setShowNoteInput] = React.useState(false);
   const [noteLoading, setNoteLoading] = React.useState(false);
 
   React.useEffect(() => {
-    loadFilamentColors().then(colors => {
-      setFilamentColors(colors.filter(c => c.printer_id === printer.id));
-    });
+    loadFilamentColors().then(colors => setDbFilamentColors(colors.filter(c => c.printer_id === printer.id)));
     loadPrinterNotes(printer.id).then(setNotes);
   }, [printer.id]);
+
+  // Couleurs AMS du bridge prioritaires sur les couleurs manuelles
+  const filamentColors = React.useMemo(() => {
+    if (telemetry?.ams_colors) {
+      try {
+        return JSON.parse(telemetry.ams_colors).map((hex, i) => ({ id: `ams-${i}`, hex_color: hex, color_name: `AMS ${i + 1}` }));
+      } catch { /* fall through */ }
+    }
+    return dbFilamentColors;
+  }, [telemetry?.ams_colors, dbFilamentColors]);
 
   const handleAddNote = async () => {
     if (!noteInput.trim() || !me) return;
