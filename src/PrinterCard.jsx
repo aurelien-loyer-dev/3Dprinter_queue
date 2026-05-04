@@ -158,13 +158,13 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                 }}>
                   <div style={{
-                    width: 32, height: 32, borderRadius: 7,
+                    width: 48, height: 48, borderRadius: 10,
                     background: color.hex_color,
                     border: `1.5px solid ${border}`,
-                    boxShadow: `0 2px 6px ${color.hex_color}55`,
+                    boxShadow: `0 3px 10px ${color.hex_color}66`,
                   }} />
                   <span style={{
-                    fontSize: 9, color: subText, maxWidth: 36,
+                    fontSize: 10, color: subText, maxWidth: 52,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     textAlign: 'center',
                   }}>{color.color_name}</span>
