@@ -910,12 +910,6 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
               </div>
             );
           })}
-
-          {windowItems.length === 0 && !isMaint && (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)' }}>Aucune réservation</span>
-            </div>
-          )}
         </div>
       </div>
     </div>
