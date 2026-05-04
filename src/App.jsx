@@ -18,7 +18,7 @@ import {
   getSessionUser, onAuthChange, logoutUser,
   loadReservations, addReservation, deleteReservation, subscribeToReservations,
   loadMaintenance, subscribeToMaintenance,
-  loadFilamentColors,
+  loadFilamentColors, subscribeToFilamentColors,
 } from './supabase.js';
 import { Icon, Avatar, Btn, GlobalAnims, StatePill } from './ui.jsx';
 import {
@@ -58,6 +58,7 @@ export default function App() {
   const [adminPanelOpen, setAdminPanelOpen] = React.useState(false);
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [maintenanceMap, setMaintenanceMap] = React.useState({});
+  const [filamentColors, setFilamentColors] = React.useState([]);
   const [wsStatus, setWsStatus] = React.useState('connecting'); // 'connecting' | 'connected' | 'error'
 
   // Session Supabase — persiste automatiquement entre les refreshs
@@ -88,6 +89,13 @@ export default function App() {
     );
     refresh();
     const channel = subscribeToMaintenance(refresh);
+    return () => channel.unsubscribe();
+  }, []);
+
+  // Filament colors — chargement + realtime
+  React.useEffect(() => {
+    loadFilamentColors().then(setFilamentColors);
+    const channel = subscribeToFilamentColors(() => loadFilamentColors().then(setFilamentColors));
     return () => channel.unsubscribe();
   }, []);
 
@@ -647,7 +655,7 @@ function KioskView({ reservations, loading, maintenanceMap = {}, wsStatus = 'con
             Chargement…
           </div>
         ) : PRINTERS.map(p => (
-          <KioskPrinterCard key={p.id} printer={p} status={printerStatus[p.id]} reservations={reservations} maintenance={maintenanceMap[p.id] || null} />
+          <KioskPrinterCard key={p.id} printer={p} status={printerStatus[p.id]} reservations={reservations} maintenance={maintenanceMap[p.id] || null} filamentColors={filamentColors} />
         ))}
       </div>
     </div>
@@ -724,11 +732,8 @@ function ArcProgress({ progress, hue, size = 90 }) {
   );
 }
 
-function KioskPrinterCard({ printer, status, reservations, maintenance }) {
-  const [filamentColors, setFilamentColors] = React.useState([]);
-  React.useEffect(() => {
-    loadFilamentColors().then(cs => setFilamentColors(cs.filter(c => c.printer_id === printer.id)));
-  }, [printer.id]);
+function KioskPrinterCard({ printer, status, reservations, maintenance, filamentColors = [] }) {
+  const printerFilaments = filamentColors.filter(c => c.printer_id === printer.id);
 
   const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
   const WINDOW_H = 10;
@@ -848,9 +853,9 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
         </div>
 
         {/* Filaments — pastilles colorées sans nom */}
-        {filamentColors.length > 0 && (
+        {printerFilaments.length > 0 && (
           <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-            {filamentColors.map(c => (
+            {printerFilaments.map(c => (
               <div key={c.id} title={c.color_name} style={{
                 width: 24, height: 24, borderRadius: 6,
                 background: c.hex_color,

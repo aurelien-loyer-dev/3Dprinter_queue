@@ -205,6 +205,13 @@ export async function deleteFilamentColor(id) {
   return true;
 }
 
+export function subscribeToFilamentColors(onRefresh) {
+  return supabase
+    .channel('qp-filament-colors-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'qp_filament_colors' }, onRefresh)
+    .subscribe();
+}
+
 // Alias pour l'AdminPanel
 export const deleteReservationAdmin = deleteReservation;
 
