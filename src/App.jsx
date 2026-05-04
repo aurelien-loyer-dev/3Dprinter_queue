@@ -893,10 +893,10 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
                 borderRadius: 5, overflow: 'hidden',
                 padding: '3px 7px', zIndex: 2,
               }}>
-                <div style={{ fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff', lineHeight: 1.2 }}>
+                <div style={{ fontSize: 9, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff', lineHeight: 1.2 }}>
                   {r.firstName} {r.lastName}
                 </div>
-                <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.65)', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
                   {fmtTime(r.startMin)}–{fmtTime(r.startMin + r.durationMin)}
                 </div>
                 {isLive && <div style={{ fontSize: 9, color: ph(printer.hue, 78, 80), fontWeight: 700, marginTop: 1 }}>● EN COURS</div>}
