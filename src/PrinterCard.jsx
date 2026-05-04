@@ -1,5 +1,13 @@
 // PrinterCard.jsx — single printer column in the dashboard
 import React from 'react';
+
+function swatchBorder(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) || 0;
+  const g = parseInt(hex.slice(3, 5), 16) || 0;
+  const b = parseInt(hex.slice(5, 7), 16) || 0;
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 160 ? '2px solid rgba(0,0,0,0.30)' : '1.5px solid rgba(255,255,255,0.12)';
+}
 import {
   loadPct, findNextAvailable,
   getNextSlotOffset,
@@ -152,21 +160,22 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
         {filamentColors.length > 0 && (
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${border}` }}>
             <div style={{ fontSize: 10, color: subText, marginBottom: 6, fontWeight: 500 }}>Filaments disponibles</div>
-            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {filamentColors.map(color => (
                 <div key={color.id} style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '7px 10px', borderRadius: 10,
+                  background: `${color.hex_color}22`,
+                  border: `1px solid ${color.hex_color}55`,
                 }}>
                   <div style={{
-                    width: 48, height: 48, borderRadius: 10,
+                    width: 36, height: 36, borderRadius: 8, flexShrink: 0,
                     background: color.hex_color,
-                    border: `1.5px solid ${border}`,
-                    boxShadow: `0 3px 10px ${color.hex_color}66`,
+                    border: swatchBorder(color.hex_color),
+                    boxShadow: `0 2px 8px ${color.hex_color}66`,
                   }} />
                   <span style={{
-                    fontSize: 10, color: subText, maxWidth: 52,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    textAlign: 'center',
+                    fontSize: 12.5, fontWeight: 600, color: fgText,
                   }}>{color.color_name}</span>
                 </div>
               ))}

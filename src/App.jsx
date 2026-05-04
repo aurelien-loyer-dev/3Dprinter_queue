@@ -1,5 +1,13 @@
 // App.jsx — main shell
 import React from 'react';
+
+function swatchBorder(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) || 0;
+  const g = parseInt(hex.slice(3, 5), 16) || 0;
+  const b = parseInt(hex.slice(5, 7), 16) || 0;
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 160 ? '2px solid rgba(0,0,0,0.35)' : '2px solid rgba(255,255,255,0.18)';
+}
 import {
   PRINTERS, NOW_FIXED,
   computePrinterStatus,
@@ -819,24 +827,21 @@ function KioskPrinterCard({ printer, status, reservations, maintenance }) {
             <div style={{ fontSize: 9.5, color: sub, fontWeight: 600, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Filaments dispo
             </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {filamentColors.map(color => (
                 <div key={color.id} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  padding: '4px 8px',
-                  borderRadius: 6,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: `0.5px solid ${color.hex_color}40`,
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '6px 10px', borderRadius: 8,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '0.5px solid rgba(255,255,255,0.10)',
                 }}>
                   <div style={{
-                    width: 12, height: 12, borderRadius: 3,
+                    width: 32, height: 32, borderRadius: 7, flexShrink: 0,
                     background: color.hex_color,
-                    border: `0.5px solid ${color.hex_color}`,
-                    flexShrink: 0,
+                    border: swatchBorder(color.hex_color),
+                    boxShadow: `0 0 10px ${color.hex_color}99`,
                   }} />
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#f5f5f7', whiteSpace: 'nowrap' }}>
                     {color.color_name}
                   </span>
                 </div>
