@@ -395,7 +395,7 @@ function ReservationRow({ r, me, dark, historic, onCancel }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function PrinterDetailPanel({ open, printerId, onClose, reservations, me, onReserve, onCancel, dark, telemetry = null, maintenance = null }) {
+export function PrinterDetailPanel({ open, printerId, onClose, reservations, me, onReserve, onCancel, dark, telemetry = null, maintenance = null, onClaimRunningPrint = null }) {
   if (!open || !printerId) return null;
 
   const printer = printerById(printerId);
@@ -428,6 +428,7 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
   const recent = items.filter(r => r.startMin + r.durationMin <= 0).reverse().slice(0, 5);
   const load = loadPct(reservations, printerId);
   const currentJob = upcoming.find(r => r.startMin <= 0);
+  const currentJobIsUnassigned = !!currentJob && !currentJob.login;
 
   const dialogBg = dark ? '#1c1c1e' : '#ffffff';
   const overlayBg = dark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.35)';
@@ -625,12 +626,27 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
                 background: `color-mix(in oklch, ${printerColor(printer.hue)} 8%, ${dialogBg})`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Avatar first={currentJob.firstName} last={currentJob.lastName} hue={printer.hue} size={28} />
+                  <Avatar first={currentJob.firstName || 'Impression'} last={currentJob.lastName || 'non assignée'} hue={printer.hue} size={28} />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 13 }}>{currentJob.firstName} {currentJob.lastName}</div>
                     <div style={{ fontSize: 11.5, color: sub }}>{currentJob.project}</div>
                   </div>
                 </div>
+
+                {currentJobIsUnassigned && me && (isPrinting || isPaused) && !isMaint && !isError && !isOffline && onClaimRunningPrint && (
+                  <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <div style={{ fontSize: 11.5, color: sub }}>
+                      Impression lancée depuis Bambu Lab, non affectée.
+                    </div>
+                    <Btn
+                      variant="primary"
+                      size="sm"
+                      onClick={() => onClaimRunningPrint(printerId)}
+                    >
+                      M'affecter
+                    </Btn>
+                  </div>
+                )}
               </div>
             </div>
           )}

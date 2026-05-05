@@ -89,6 +89,49 @@ export default function App() {
   const [cameraTelemetryMap, setCameraTelemetryMap] = React.useState({});
   const [cameraFocusId, setCameraFocusId] = React.useState(null);
 
+  const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
+
+  // If a printer is actively printing without an active reservation, inject a
+  // synthetic timeline slot so users can see real occupancy on the planning.
+  const autoPrintReservations = React.useMemo(() => {
+    const list = [];
+    for (const p of PRINTERS) {
+      const tel = telemetryMap[p.id];
+      if (!tel) continue;
+      if (!['printing', 'paused'].includes(tel.state)) continue;
+      const updatedAt = tel.updated_at ? new Date(tel.updated_at).getTime() : 0;
+      if (!updatedAt || Date.now() - updatedAt > 120_000) continue;
+
+      const hasActiveSlot = reservations.some(r =>
+        r.printerId === p.id &&
+        r.startMin <= elapsedMin &&
+        r.startMin + r.durationMin > elapsedMin
+      );
+      if (hasActiveSlot) continue;
+
+      const remaining = Number.isFinite(Number(tel.remaining_min)) ? Number(tel.remaining_min) : 30;
+      const durationMin = Math.max(5, Math.ceil(Math.max(1, remaining)));
+      const startMin = Math.floor(elapsedMin);
+
+      list.push({
+        id: `auto-live-${p.id}`,
+        printerId: p.id,
+        login: '',
+        firstName: 'Impression',
+        lastName: 'non assignée',
+        project: tel.current_file || 'Impression en cours',
+        startMin,
+        durationMin,
+      });
+    }
+    return list;
+  }, [telemetryMap, reservations, elapsedMin]);
+
+  const reservationsForDisplay = React.useMemo(() => {
+    if (autoPrintReservations.length === 0) return reservations;
+    return [...reservations, ...autoPrintReservations].sort((a, b) => a.startMin - b.startMin);
+  }, [reservations, autoPrintReservations]);
+
   // Session Supabase — persiste automatiquement entre les refreshs
   React.useEffect(() => {
     getSessionUser().then(user => { setMe(user); setAuthLoading(false); });
@@ -241,6 +284,75 @@ export default function App() {
     });
   };
 
+  const handleClaimRunningPrint = async (printerId) => {
+    if (!me) return;
+    const tel = telemetryMap[printerId];
+    if (!tel || !['printing', 'paused'].includes(tel.state)) {
+      setNotif({
+        title: 'Aucune impression active',
+        message: 'Cette imprimante n\'est pas en impression en ce moment.',
+        icon: 'clock', tone: 'warn',
+      });
+      return;
+    }
+
+    const current = reservations.find(r =>
+      r.printerId === printerId &&
+      r.startMin <= elapsedMin &&
+      r.startMin + r.durationMin > elapsedMin
+    );
+
+    if (current) {
+      if (current.login === me.login) {
+        setNotif({
+          title: 'Impression déjà affectée',
+          message: 'Cette impression est déjà affectée à ton compte.',
+          icon: 'check', tone: 'success',
+        });
+      } else {
+        setNotif({
+          title: 'Impression déjà affectée',
+          message: `Cette impression est déjà affectée à ${current.firstName} ${current.lastName}.`,
+          icon: 'clock', tone: 'warn',
+        });
+      }
+      return;
+    }
+
+    const remaining = Number.isFinite(Number(tel.remaining_min)) ? Number(tel.remaining_min) : 30;
+    const durationMin = Math.max(5, Math.ceil(Math.max(1, remaining)));
+    const startMin = Math.floor(elapsedMin);
+    const newRes = {
+      id: `res-live-${Date.now()}`,
+      printerId,
+      login: me.login,
+      firstName: me.firstName,
+      lastName: me.lastName,
+      startMin,
+      durationMin,
+      project: tel.current_file || 'Impression en cours',
+    };
+
+    setReservations(prev => [...prev, newRes]);
+    const ok = await addReservation(newRes);
+    if (!ok) {
+      setReservations(prev => prev.filter(r => r.id !== newRes.id));
+      setNotif({
+        title: 'Affectation impossible',
+        message: 'Impossible d\'enregistrer cette affectation pour le moment.',
+        icon: 'close', tone: 'warn',
+      });
+      return;
+    }
+
+    const printer = printerById(printerId);
+    setNotif({
+      title: 'Impression affectée',
+      message: `${printer.name} · ${fmtTime(startMin)}–${fmtTime(startMin + durationMin)} (${fmtDuration(durationMin)})`,
+      icon: 'check', tone: 'success',
+    });
+  };
+
   const openReserve = (printerId) => {
     setReserveDefaultPrinter(printerId);
     setReserveModalOpen(true);
@@ -298,7 +410,7 @@ export default function App() {
 
   const printerStatus = Object.fromEntries(
     PRINTERS.map(p => [p.id, mergePrinterStatus(
-      computePrinterStatus(reservations, p.id),
+      computePrinterStatus(reservationsForDisplay, p.id),
       telemetryMap[p.id]
     )])
   );
@@ -307,8 +419,8 @@ export default function App() {
     return !maintenanceMap[p.id] && ['printing', 'paused'].includes(printerStatus[p.id].state) && (tel?.state === 'printing' || tel?.state === 'paused');
   });
 
-  const myUpcomingCount = reservations.filter(r => r.login === me.login && r.startMin + r.durationMin > 0).length;
-  const todayCount = reservations.filter(r => r.startMin + r.durationMin > 0 && r.startMin < 24 * 60).length;
+  const myUpcomingCount = reservationsForDisplay.filter(r => r.login === me.login && r.startMin + r.durationMin > 0).length;
+  const todayCount = reservationsForDisplay.filter(r => r.startMin + r.durationMin > 0 && r.startMin < 24 * 60).length;
   const printingCount = PRINTERS.filter(p => ['printing', 'soon_available'].includes(printerStatus[p.id].state)).length;
   const availableCount = PRINTERS.filter(p => ['available', 'soon_unavailable'].includes(printerStatus[p.id].state)).length;
 
@@ -457,7 +569,7 @@ export default function App() {
           <DashboardView
             t={t}
             printerStatus={printerStatus}
-            reservations={reservations}
+            reservations={reservationsForDisplay}
             me={me}
             maintenanceMap={maintenanceMap}
             telemetryMap={telemetryMap}
@@ -481,7 +593,7 @@ export default function App() {
           <ListView
             t={t}
             printerStatus={printerStatus}
-            reservations={reservations}
+            reservations={reservationsForDisplay}
             me={me}
             onPrinterClick={(id) => setDetailPrinterId(id)}
             onReserveClick={openReserve}
@@ -517,7 +629,7 @@ export default function App() {
         onClose={() => setReserveModalOpen(false)}
         onConfirm={handleReserve}
         defaultPrinterId={reserveDefaultPrinter}
-        reservations={reservations}
+        reservations={reservationsForDisplay}
         slotSize={t.slotSize}
         dark={t.dark}
       />
@@ -535,13 +647,14 @@ export default function App() {
         open={!!detailPrinterId}
         printerId={detailPrinterId}
         onClose={() => setDetailPrinterId(null)}
-        reservations={reservations}
+        reservations={reservationsForDisplay}
         me={me}
         onReserve={(id) => { setDetailPrinterId(null); openReserve(id); }}
         onCancel={handleCancel}
         dark={t.dark}
         telemetry={detailPrinterId ? (telemetryMap[detailPrinterId] || null) : null}
         maintenance={detailPrinterId ? (maintenanceMap[detailPrinterId] || null) : null}
+        onClaimRunningPrint={handleClaimRunningPrint}
       />
 
       {me.isAdmin && adminPanelOpen && (
