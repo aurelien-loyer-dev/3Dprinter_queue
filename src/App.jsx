@@ -1254,11 +1254,12 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
             <RingProgress progress={status.progress || 0} hue={210} size={72} strokeWidth={8} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: 'hsl(210, 65%, 62%)', lineHeight: 1 }}>En pause</div>
-              {currentJob && (
-                <div style={{ fontWeight: 700, fontSize: 12, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {currentJob.firstName} {currentJob.lastName}
-                </div>
-              )}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: 12, color: sub }}>fin {fmtRelativeFuture(status.etaMin)}</div>
+                {status.etaMin != null && (
+                  <div style={{ fontSize: 12, color: sub }}>· {fmtDuration(Math.max(1, Math.round(status.etaMin)))}</div>
+                )}
+              </div>
               {telemetry?.nozzle_temp != null && (
                 <div style={{ fontSize: 10, color: sub, marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
                   🌡 {telemetry.nozzle_temp}°{telemetry.bed_temp != null ? ` · lit ${telemetry.bed_temp}°` : ''}
@@ -1273,11 +1274,12 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
               <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.05 }}>
                 {isPrinting ? 'En impression' : 'Impression'}
               </div>
-              {currentJob && (
-                <div style={{ fontWeight: 700, fontSize: 12, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {currentJob.firstName} {currentJob.lastName}
-                </div>
-              )}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: 12, color: sub }}>fin {fmtRelativeFuture(status.etaMin)}</div>
+                {status.etaMin != null && (
+                  <div style={{ fontSize: 12, color: sub }}>· {fmtDuration(Math.max(1, Math.round(status.etaMin)))}</div>
+                )}
+              </div>
               {/* Telemetry row */}
               {telemetry && (telemetry.nozzle_temp != null || telemetry.layer_current != null) && (
                 <div style={{ display: 'flex', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
