@@ -76,6 +76,7 @@ export function fmtTimeRound(min) {
 }
 
 export function fmtDuration(min) {
+  if (min == null || isNaN(min) || min < 0) return '—';
   const h = Math.floor(min / 60);
   const m = min % 60;
   if (h && m) return `${h}h${String(m).padStart(2, '0')}`;
@@ -95,6 +96,7 @@ export function fmtDayLabel(min) {
 }
 
 export function fmtRelativeFuture(min) {
+  if (min == null || isNaN(min)) return '—';
   min = Math.round(min * 100) / 100;
   if (min < 1)  return 'maintenant';
   if (min < 60) return `${Math.round(min)}min`;
