@@ -394,6 +394,15 @@ export default function App() {
           )}
         </Btn>
 
+        <Btn
+          variant="secondary"
+          size="sm"
+          icon={t.view === 'camera' ? 'list' : 'grid'}
+          onClick={() => setTweak('view', t.view === 'camera' ? 'dashboard' : 'camera')}
+        >
+          {t.view === 'camera' ? 'Planning' : 'Caméras'}
+        </Btn>
+
         {me.isAdmin && (
           <Btn variant="secondary" size="sm" icon="settings" onClick={() => setAdminPanelOpen(true)}>
             Admin
