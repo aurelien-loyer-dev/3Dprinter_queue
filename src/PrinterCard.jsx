@@ -629,7 +629,7 @@ function ReservationBlock({ r, top, height, hue, isMine, isLive, dark, dimmed, h
             width: 20, height: 20, borderRadius: 5,
             border: 'none', background: 'rgba(0,0,0,0.08)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: textColor,
+            cursor: 'pointer', color: timeColor,
           }}
           title="Annuler ma réservation"
         >
