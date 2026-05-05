@@ -505,6 +505,8 @@ export default function App() {
         onReserve={(id) => { setDetailPrinterId(null); openReserve(id); }}
         onCancel={handleCancel}
         dark={t.dark}
+        telemetry={detailPrinterId ? (telemetryMap[detailPrinterId] || null) : null}
+        maintenance={detailPrinterId ? (maintenanceMap[detailPrinterId] || null) : null}
       />
 
       {me.isAdmin && adminPanelOpen && (

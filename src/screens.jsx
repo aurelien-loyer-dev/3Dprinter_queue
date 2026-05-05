@@ -395,12 +395,29 @@ function ReservationRow({ r, me, dark, historic, onCancel }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function PrinterDetailPanel({ open, printerId, onClose, reservations, me, onReserve, onCancel, dark }) {
+export function PrinterDetailPanel({ open, printerId, onClose, reservations, me, onReserve, onCancel, dark, telemetry = null, maintenance = null }) {
   if (!open || !printerId) return null;
 
   const printer = printerById(printerId);
-  const status = computePrinterStatus(reservations, printerId);
-  const isPrinting = status.state === 'printing' || status.state === 'soon_available';
+  const resStatus = computePrinterStatus(reservations, printerId);
+
+  // Merge telemetry (< 2 min) over reservation-based status
+  const tel = telemetry && (Date.now() - new Date(telemetry.updated_at).getTime() < 120_000) ? telemetry : null;
+  const status = (() => {
+    if (!tel) return resStatus;
+    if (tel.state === 'printing') return { ...resStatus, state: 'printing', progress: Math.min(1, (tel.progress || 0) / 100), etaMin: tel.remaining_min ?? resStatus.etaMin, fromTelemetry: true };
+    if (tel.state === 'paused')  return { state: 'paused',  fromTelemetry: true };
+    if (tel.state === 'error')   return { state: 'error',   fromTelemetry: true };
+    if (tel.state === 'offline') return { state: 'offline', fromTelemetry: true };
+    return resStatus;
+  })();
+
+  const effectiveState = maintenance ? 'maintenance' : status.state;
+  const isPrinting = effectiveState === 'printing' || effectiveState === 'soon_available';
+  const isPaused   = effectiveState === 'paused';
+  const isError    = effectiveState === 'error';
+  const isOffline  = effectiveState === 'offline';
+  const isMaint    = effectiveState === 'maintenance';
 
   const items = reservations
     .filter(r => r.printerId === printerId && r.startMin + r.durationMin > -60 * 24)
@@ -409,6 +426,7 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
   const upcoming = items.filter(r => r.startMin + r.durationMin > 0);
   const recent = items.filter(r => r.startMin + r.durationMin <= 0).reverse().slice(0, 5);
   const load = loadPct(reservations, printerId);
+  const currentJob = upcoming.find(r => r.startMin <= 0);
 
   const dialogBg = dark ? '#1c1c1e' : '#ffffff';
   const overlayBg = dark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.35)';
@@ -416,8 +434,8 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
   const sub = dark ? 'rgba(255,255,255,0.55)' : 'rgba(29,29,31,0.55)';
   const border = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
   const fieldBg = dark ? 'rgba(255,255,255,0.04)' : '#f5f5f7';
-
-  const currentJob = upcoming.find(r => r.startMin <= 0);
+  const chipBg = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const chipBorder = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
 
   return (
     <div
@@ -473,20 +491,115 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
             </div>
           </div>
 
-          <StatePill state={status.state} />
+          <StatePill state={effectiveState} />
 
-          {isPrinting && (
+          {/* Progress bar when printing */}
+          {(isPrinting || isPaused) && status.progress != null && (
             <div style={{ marginTop: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
                 <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{Math.round(status.progress * 100)}% imprimé</span>
-                <span style={{ color: sub, fontVariantNumeric: 'tabular-nums' }}>fin {fmtRelativeFuture(status.etaMin)}</span>
+                {isPrinting && status.etaMin != null && (
+                  <span style={{ color: sub, fontVariantNumeric: 'tabular-nums' }}>fin {fmtRelativeFuture(status.etaMin)}</span>
+                )}
+                {isPaused && <span style={{ color: sub }}>En pause</span>}
               </div>
               <div style={{ height: 5, borderRadius: 999, background: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-                <div style={{ width: `${status.progress * 100}%`, height: '100%', background: printerColor(printer.hue), borderRadius: 999 }} />
+                <div style={{ width: `${status.progress * 100}%`, height: '100%', background: isPaused ? 'hsl(210,55%,55%)' : printerColor(printer.hue), borderRadius: 999 }} />
               </div>
             </div>
           )}
+
+          {/* File en cours */}
+          {tel?.current_file && (isPrinting || isPaused) && (
+            <div style={{ marginTop: 10, fontSize: 11.5, color: sub, display: 'flex', alignItems: 'center', gap: 5, overflow: 'hidden' }}>
+              <Icon name="printer" size={11} />
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tel.current_file}</span>
+            </div>
+          )}
         </div>
+
+        {/* Maintenance banner */}
+        {isMaint && (
+          <div style={{
+            margin: '0', padding: '14px 24px',
+            background: dark ? 'rgba(180,60,30,0.12)' : 'oklch(0.97 0.03 25)',
+            borderBottom: `0.5px solid ${dark ? 'rgba(180,60,30,0.25)' : 'oklch(0.90 0.05 25)'}`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, color: dark ? 'oklch(0.72 0.18 25)' : 'oklch(0.42 0.18 25)', marginBottom: 4 }}>
+              <Icon name="wrench" size={14} />
+              En maintenance
+            </div>
+            <div style={{ fontSize: 12.5, color: dark ? 'oklch(0.62 0.14 25)' : 'oklch(0.48 0.14 25)', lineHeight: 1.5 }}>
+              {maintenance.message}
+            </div>
+            {maintenance.return_at && (
+              <div style={{ fontSize: 11, color: sub, marginTop: 4 }}>
+                Retour estimé {new Date(maintenance.return_at).toLocaleString('fr-FR', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Error banner */}
+        {isError && (
+          <div style={{
+            margin: '0', padding: '14px 24px',
+            background: dark ? 'rgba(200,40,30,0.12)' : 'oklch(0.97 0.03 25)',
+            borderBottom: `0.5px solid ${dark ? 'rgba(200,40,30,0.25)' : 'oklch(0.90 0.05 25)'}`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, color: dark ? 'oklch(0.7 0.2 25)' : 'oklch(0.42 0.2 25)', marginBottom: 2 }}>
+              <Icon name="wrench" size={14} />
+              Erreur détectée
+            </div>
+            {tel?.error_code && <div style={{ fontSize: 12, color: sub }}>Code d'erreur : {tel.error_code}</div>}
+            {tel?.current_stage != null && <div style={{ fontSize: 11.5, color: sub, marginTop: 2 }}>Étape : {tel.current_stage}</div>}
+          </div>
+        )}
+
+        {/* Offline banner */}
+        {isOffline && (
+          <div style={{
+            margin: '0', padding: '10px 24px',
+            background: dark ? 'rgba(255,255,255,0.03)' : '#f5f5f5',
+            borderBottom: `0.5px solid ${border}`,
+          }}>
+            <div style={{ fontSize: 12.5, color: sub }}>Imprimante hors ligne ou non joignable.</div>
+          </div>
+        )}
+
+        {/* Telemetry section */}
+        {tel && (
+          <div style={{ padding: '16px 24px', borderBottom: `0.5px solid ${border}` }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: sub, marginBottom: 12 }}>
+              Télémétrie en direct
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {tel.nozzle_temp != null && (
+                <TelStat label="Buse" value={`${tel.nozzle_temp}°C`} icon="thermometer" accent={tel.nozzle_temp > 180 ? 'oklch(0.58 0.18 25)' : undefined} dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
+              )}
+              {tel.bed_temp != null && (
+                <TelStat label="Plateau" value={`${tel.bed_temp}°C`} icon="flame" accent={tel.bed_temp > 40 ? 'oklch(0.55 0.16 50)' : undefined} dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
+              )}
+              {tel.chamber_temp != null && (
+                <TelStat label="Chambre" value={`${tel.chamber_temp}°C`} icon="thermometer" dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
+              )}
+              {tel.layer_current != null && tel.layer_total != null && (
+                <TelStat label="Couche" value={`${tel.layer_current} / ${tel.layer_total}`} icon="sparkle" dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
+              )}
+              {tel.speed_level && (
+                <TelStat label="Vitesse" value={tel.speed_level} icon="sparkle" dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
+              )}
+              {tel.remaining_min != null && (isPrinting || isPaused) && (
+                <TelStat label="Restant" value={`${tel.remaining_min} min`} icon="clock" dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
+              )}
+            </div>
+            {tel.updated_at && (
+              <div style={{ fontSize: 10.5, color: sub, marginTop: 10, opacity: 0.7 }}>
+                Mis à jour {new Date(tel.updated_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Stats */}
         <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -505,7 +618,7 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
                 border: `0.5px solid ${printerColor(printer.hue)}`,
                 background: `color-mix(in oklch, ${printerColor(printer.hue)} 8%, ${dialogBg})`,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Avatar first={currentJob.firstName} last={currentJob.lastName} hue={printer.hue} size={28} />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 13 }}>{currentJob.firstName} {currentJob.lastName}</div>
@@ -547,6 +660,25 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function TelStat({ label, value, icon, accent, dark, fg, sub, bg, border }) {
+  return (
+    <div style={{
+      padding: '10px 12px', borderRadius: 10,
+      border: `0.5px solid ${accent ? `${accent}55` : border}`,
+      background: accent ? (dark ? `${accent}18` : `${accent}12`) : bg,
+      display: 'flex', flexDirection: 'column', gap: 3,
+    }}>
+      <div style={{ fontSize: 10, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+        <Icon name={icon} size={10} />
+        {label}
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: accent || fg, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
+        {value}
       </div>
     </div>
   );
