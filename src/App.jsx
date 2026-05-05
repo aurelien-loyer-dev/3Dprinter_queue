@@ -1255,10 +1255,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: 'hsl(210, 65%, 62%)', lineHeight: 1 }}>En pause</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
-                <div style={{ fontSize: 12, color: sub }}>fin {fmtRelativeFuture(status.etaMin)}</div>
-                {status.etaMin != null && (
-                  <div style={{ fontSize: 12, color: sub }}>· {fmtDuration(Math.max(1, Math.round(status.etaMin)))}</div>
-                )}
+                <div style={{ fontSize: 12, color: sub }}>Fin dans {fmtRelativeFuture(status.etaMin)}</div>
               </div>
               {telemetry?.nozzle_temp != null && (
                 <div style={{ fontSize: 10, color: sub, marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
@@ -1275,10 +1272,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
                 {isPrinting ? 'En impression' : 'Impression'}
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
-                <div style={{ fontSize: 12, color: sub }}>fin {fmtRelativeFuture(status.etaMin)}</div>
-                {status.etaMin != null && (
-                  <div style={{ fontSize: 12, color: sub }}>· {fmtDuration(Math.max(1, Math.round(status.etaMin)))}</div>
-                )}
+                <div style={{ fontSize: 12, color: sub }}>Fin dans {fmtRelativeFuture(status.etaMin)}</div>
               </div>
               {/* Telemetry row */}
               {telemetry && (telemetry.nozzle_temp != null || telemetry.layer_current != null) && (
