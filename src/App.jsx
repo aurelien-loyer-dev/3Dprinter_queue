@@ -180,10 +180,14 @@ export default function App() {
     const channel = subscribeToReservations(
       () => { loadReservations().then(setReservations); },
       (status) => {
-        if (status === 'SUBSCRIBED')     setWsStatus('connected');
-        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED')
+        if (status === 'SUBSCRIBED') {
+          setWsStatus('connected');
+          loadReservations().then(setReservations);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           setWsStatus('error');
-        else setWsStatus('connecting');
+        } else {
+          setWsStatus('connecting');
+        }
       }
     );
     return () => channel.unsubscribe();
