@@ -14,7 +14,7 @@ code: 22935187
 serial number: 0300DA5C2901740
 
 DESIRE
-ip: 192.168.0.110
+ip: 192.168.0.104
 code: 14061693
 serial number: 0300DA5C2900524
 
