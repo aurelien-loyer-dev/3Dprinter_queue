@@ -1166,16 +1166,17 @@ function ArcProgress({ progress, hue, size = 90 }) {
   );
 }
 
-function RingProgress({ progress, hue, size = 72, strokeWidth = 8, label, textColor = '#f5f5f7' }) {
+function RingProgress({ progress, hue, size = 72, strokeWidth = 8, label, textColor = '#f5f5f7', color }) {
   const r = (size - strokeWidth) / 2;
   const circ = 2 * Math.PI * r;
   const safeProgress = Math.min(1, Math.max(0, progress || 0));
+  const strokeColor = color ?? `hsl(${hue}, 62%, 62%)`;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeWidth} />
       <circle
         cx={size / 2} cy={size / 2} r={r} fill="none"
-        stroke={`hsl(${hue}, 62%, 62%)`} strokeWidth={strokeWidth} strokeLinecap="round"
+        stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round"
         strokeDasharray={`${circ * safeProgress} ${circ}`}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         style={{ transition: 'stroke-dasharray 2s ease' }}
@@ -1200,15 +1201,30 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
     loadFilamentColors().then(cs => setDbColors(cs.filter(c => c.printer_id === printer.id)));
   }, [printer.id]);
 
-  // Couleurs AMS réelles (bridge) prioritaires sur les couleurs manuelles
+  // Parse ams_colors — nouveau format {"colors":[...], "active":N} ou ancien format array
+  const amsData = React.useMemo(() => {
+    if (!telemetry?.ams_colors) return null;
+    try {
+      const parsed = JSON.parse(telemetry.ams_colors);
+      if (Array.isArray(parsed)) return { colors: parsed, active: null };
+      if (parsed && Array.isArray(parsed.colors)) return { colors: parsed.colors, active: parsed.active ?? null };
+    } catch { /* fall through */ }
+    return null;
+  }, [telemetry?.ams_colors]);
+
   const printerFilaments = React.useMemo(() => {
-    if (telemetry?.ams_colors) {
-      try {
-        return JSON.parse(telemetry.ams_colors).map((hex, i) => ({ id: `ams-${i}`, hex_color: hex }));
-      } catch { /* fall through */ }
-    }
+    if (amsData) return amsData.colors.map((hex, i) => ({ id: `ams-${i}`, hex_color: hex }));
     return dbColors;
-  }, [telemetry?.ams_colors, dbColors]);
+  }, [amsData, dbColors]);
+
+  // Couleur du filament actif pendant l'impression
+  const activeFilamentColor = React.useMemo(() => {
+    if (!amsData) return null;
+    const { colors, active } = amsData;
+    if (!colors.length) return null;
+    const idx = (active != null && active >= 0 && active < colors.length) ? active : 0;
+    return colors[idx];
+  }, [amsData]);
 
   const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
   const WINDOW_H = 10;
@@ -1243,11 +1259,13 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
   const isOffline   = effectiveState === 'offline';
 
   const ph = (h, l = 48, s = 55) => `hsl(${h}, ${s}%, ${l}%)`;
+  const printingAccent = (isPrinting || isPaused) && activeFilamentColor ? activeFilamentColor : ph(printer.hue);
   const accent = isMaint              ? 'hsl(15, 65%, 44%)'
     : isError                         ? 'hsl(0, 65%, 48%)'
     : isOffline                       ? '#555'
-    : isPaused                        ? 'hsl(210, 55%, 48%)'
+    : isPaused                        ? (activeFilamentColor ?? 'hsl(210, 55%, 48%)')
     : isAvailable || isSoon           ? 'hsl(145, 52%, 46%)'
+    : isPrinting                      ? printingAccent
     : ph(printer.hue);
 
   const border = 'rgba(255,255,255,0.06)';
@@ -1299,11 +1317,11 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
           </div>
         ) : isPaused ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <RingProgress progress={status.progress || 0} hue={210} size={72} strokeWidth={8} />
+            <RingProgress progress={status.progress || 0} hue={210} size={72} strokeWidth={8} color={activeFilamentColor ?? undefined} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: 'hsl(210, 65%, 62%)', lineHeight: 1 }}>En pause</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: activeFilamentColor ?? 'hsl(210, 65%, 62%)', lineHeight: 1 }}>En pause</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
-                <div style={{ fontSize: 12, color: sub }}>Fin dans {fmtRelativeFuture(status.etaMin)}</div>
+                <div style={{ fontSize: 12, color: activeFilamentColor ?? sub }}>Fin dans {fmtRelativeFuture(status.etaMin)}</div>
               </div>
               {telemetry?.nozzle_temp != null && (
                 <div style={{ fontSize: 10, color: sub, marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
@@ -1314,13 +1332,13 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
           </div>
         ) : isPrinting ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <RingProgress progress={status.progress} hue={printer.hue} size={72} strokeWidth={8} />
+            <RingProgress progress={status.progress} hue={printer.hue} size={72} strokeWidth={8} color={activeFilamentColor} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.05 }}>
+              <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.05, color: activeFilamentColor ?? undefined }}>
                 {isPrinting ? 'En impression' : 'Impression'}
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
-                <div style={{ fontSize: 12, color: sub }}>Fin dans {fmtRelativeFuture(status.etaMin)}</div>
+                <div style={{ fontSize: 12, color: activeFilamentColor ?? sub }}>Fin dans {fmtRelativeFuture(status.etaMin)}</div>
               </div>
               {/* Telemetry row */}
               {telemetry && (telemetry.nozzle_temp != null || telemetry.layer_current != null) && (

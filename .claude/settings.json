@@ -3,7 +3,9 @@
     "allow": [
       "Bash(npm install *)",
       "Bash(npx vite *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(python3 -c \"import bambulabs_api as bl; print\\([x for x in dir\\(bl.Printer\\) if 'tray' in x.lower\\(\\) or 'ams' in x.lower\\(\\) or 'filament' in x.lower\\(\\)]\\)\")",
+      "Bash(python3 -c ' *)"
     ]
   }
 }
