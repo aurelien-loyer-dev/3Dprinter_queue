@@ -31,6 +31,27 @@ const kioskChipStyle = {
   display: 'inline-flex', alignItems: 'center',
 };
 
+// Garantit qu'une couleur hex est lisible sur fond sombre (#131313).
+// Les couleurs trop sombres (noir, bleu nuit, vert foncé…) sont remontées à L=62%.
+function safeFilamentColor(hex) {
+  if (!hex || hex.length < 7) return null;
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (l > 0.38) return hex;
+  if (max === min) return 'rgba(255,255,255,0.75)'; // noir/gris très foncé → gris clair
+  const d = max - min;
+  const s = d / (l < 0.5 ? max + min : 2 - max - min);
+  let h = 0;
+  if (max === r)      h = ((g - b) / d % 6) * 60;
+  else if (max === g) h = ((b - r) / d + 2) * 60;
+  else                h = ((r - g) / d + 4) * 60;
+  if (h < 0) h += 360;
+  return `hsl(${Math.round(h)}, ${Math.round(s * 100)}%, 62%)`;
+}
+
 function swatchBorder(hex) {
   const r = parseInt(hex.slice(1, 3), 16) || 0;
   const g = parseInt(hex.slice(3, 5), 16) || 0;
@@ -1217,13 +1238,13 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
     return dbColors;
   }, [amsData, dbColors]);
 
-  // Couleur du filament actif pendant l'impression
+  // Couleur du filament actif — brute puis corrigée pour fond sombre
   const activeFilamentColor = React.useMemo(() => {
     if (!amsData) return null;
     const { colors, active } = amsData;
     if (!colors.length) return null;
     const idx = (active != null && active >= 0 && active < colors.length) ? active : 0;
-    return colors[idx];
+    return safeFilamentColor(colors[idx]);
   }, [amsData]);
 
   const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
