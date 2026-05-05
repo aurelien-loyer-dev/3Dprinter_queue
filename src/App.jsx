@@ -1417,8 +1417,23 @@ function ListRow({ printer, status, reservations, me, onPrinterClick, onReserveC
             <StatePill state={status.state} compact />
           </div>
           {(status.state === 'printing' || status.state === 'soon_available') && (
-            <div style={{ fontSize: 11.5, color: sub, fontVariantNumeric: 'tabular-nums' }}>
-              {Math.round(status.progress * 100)}% · fin {fmtRelativeFuture(status.etaMin)}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ position: 'relative', width: 30, height: 30, flexShrink: 0 }}>
+                <svg viewBox="0 0 30 30" width="30" height="30" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="15" cy="15" r="11" fill="none" stroke={dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} strokeWidth="3.5" />
+                  <circle
+                    cx="15" cy="15" r="11" fill="none"
+                    stroke={printerColor(printer.hue)} strokeWidth="3.5" strokeLinecap="round"
+                    strokeDasharray={`${2 * Math.PI * 11 * Math.max(0, Math.min(1, status.progress || 0))} ${2 * Math.PI * 11}`}
+                  />
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8.5, fontWeight: 700, color: fg, fontVariantNumeric: 'tabular-nums' }}>
+                  {Math.round((status.progress || 0) * 100)}%
+                </div>
+              </div>
+              <div style={{ fontSize: 11.5, color: sub, fontVariantNumeric: 'tabular-nums' }}>
+                fin {fmtRelativeFuture(status.etaMin)}
+              </div>
             </div>
           )}
           {status.state === 'available' && (

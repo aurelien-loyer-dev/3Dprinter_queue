@@ -493,18 +493,25 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
 
           <StatePill state={effectiveState} />
 
-          {/* Progress bar when printing */}
+          {/* Progress circle when printing */}
           {(isPrinting || isPaused) && status.progress != null && (
-            <div style={{ marginTop: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
-                <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{Math.round(status.progress * 100)}% imprimé</span>
-                {isPrinting && status.etaMin != null && (
-                  <span style={{ color: sub, fontVariantNumeric: 'tabular-nums' }}>fin {fmtRelativeFuture(status.etaMin)}</span>
-                )}
-                {isPaused && <span style={{ color: sub }}>En pause</span>}
+            <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ position: 'relative', width: 58, height: 58, flexShrink: 0 }}>
+                <svg viewBox="0 0 58 58" width="58" height="58" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="29" cy="29" r="23" fill="none" stroke={dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} strokeWidth="6" />
+                  <circle
+                    cx="29" cy="29" r="23" fill="none"
+                    stroke={isPaused ? 'hsl(210,55%,55%)' : printerColor(printer.hue)} strokeWidth="6" strokeLinecap="round"
+                    strokeDasharray={`${2 * Math.PI * 23 * Math.max(0, Math.min(1, status.progress || 0))} ${2 * Math.PI * 23}`}
+                  />
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: fg, fontVariantNumeric: 'tabular-nums' }}>
+                  {Math.round((status.progress || 0) * 100)}%
+                </div>
               </div>
-              <div style={{ height: 5, borderRadius: 999, background: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-                <div style={{ width: `${status.progress * 100}%`, height: '100%', background: isPaused ? 'hsl(210,55%,55%)' : printerColor(printer.hue), borderRadius: 999 }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: sub }}>Fin {fmtRelativeFuture(status.etaMin)}</div>
+                {isPaused && <div style={{ fontSize: 12, color: sub }}>En pause</div>}
               </div>
             </div>
           )}
