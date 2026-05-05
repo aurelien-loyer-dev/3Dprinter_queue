@@ -312,9 +312,13 @@ export default function App() {
       startMin, durationMin, project,
     };
     setReserveModalOpen(false);
-    // Optimistic update — le realtime confirmera (ou rechargera)
     setReservations(prev => [...prev, newRes]);
-    await addReservation(newRes);
+    const ok = await addReservation(newRes);
+    if (!ok) {
+      setReservations(prev => prev.filter(r => r.id !== newRes.id));
+      setNotif({ title: 'Erreur de réservation', message: 'Impossible d\'enregistrer la réservation, réessaie.', icon: 'close', tone: 'warn' });
+      return;
+    }
     const printer = printerById(printerId);
     setNotif({
       title: 'Réservation confirmée',
