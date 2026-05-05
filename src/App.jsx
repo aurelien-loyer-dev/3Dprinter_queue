@@ -43,7 +43,7 @@ import {
   loadReservations, addReservation, deleteReservation, subscribeToReservations,
   loadMaintenance, subscribeToMaintenance,
   loadFilamentColors, subscribeToFilamentColors,
-  loadPrinterTelemetry, subscribeToPrinterTelemetry,
+  loadPrinterTelemetry, loadPrinterCameraTelemetry, subscribeToPrinterTelemetry,
 } from './supabase.js';
 import { Icon, Avatar, Btn, GlobalAnims, StatePill } from './ui.jsx';
 import {
@@ -86,6 +86,7 @@ export default function App() {
   const [filamentColors, setFilamentColors] = React.useState([]);
   const [wsStatus, setWsStatus] = React.useState('connecting');
   const [telemetryMap, setTelemetryMap] = React.useState({});
+  const [cameraTelemetryMap, setCameraTelemetryMap] = React.useState({});
   const [cameraFocusId, setCameraFocusId] = React.useState(null);
 
   // Session Supabase — persiste automatiquement entre les refreshs
@@ -133,6 +134,17 @@ export default function App() {
     const channel = subscribeToPrinterTelemetry(refresh);
     return () => channel.unsubscribe();
   }, []);
+
+  React.useEffect(() => {
+    if (t.view !== 'camera') {
+      setCameraTelemetryMap({});
+      return;
+    }
+    const refresh = () => loadPrinterCameraTelemetry().then(setCameraTelemetryMap);
+    refresh();
+    const channel = subscribeToPrinterTelemetry(refresh);
+    return () => channel.unsubscribe();
+  }, [t.view]);
 
   // Progress bars : re-render 30s. Kiosque : vrai rechargement depuis la DB toutes les 15s
   React.useEffect(() => {
@@ -292,7 +304,7 @@ export default function App() {
   );
   const activeCameraPrinters = PRINTERS.filter(p => {
     const tel = telemetryMap[p.id];
-    return !maintenanceMap[p.id] && tel?.camera_jpeg && ['printing', 'paused'].includes(printerStatus[p.id].state);
+    return !maintenanceMap[p.id] && ['printing', 'paused'].includes(printerStatus[p.id].state) && (tel?.state === 'printing' || tel?.state === 'paused');
   });
 
   React.useEffect(() => {
@@ -455,7 +467,7 @@ export default function App() {
         ) : t.view === 'camera' ? (
           <CameraView
             printers={activeCameraPrinters}
-            telemetryMap={telemetryMap}
+            telemetryMap={cameraTelemetryMap}
             printerStatus={printerStatus}
             selectedPrinterId={cameraFocusId}
             onSelectPrinter={setCameraFocusId}

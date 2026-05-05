@@ -280,8 +280,18 @@ export function subscribeToMaintenance(onRefresh) {
 // ── Télémétrie Bambu Lab ───────────────────────────────────────────────────
 
 export async function loadPrinterTelemetry() {
-  const { data, error } = await supabase.from('qp_printer_telemetry').select('*');
+  const { data, error } = await supabase
+    .from('qp_printer_telemetry')
+    .select('printer_id,state,progress,remaining_min,current_file,layer_current,layer_total,nozzle_temp,bed_temp,chamber_temp,speed_level,error_code,current_stage,ams_colors,updated_at');
   if (error) { console.error('loadPrinterTelemetry:', error.message); return {}; }
+  return Object.fromEntries((data || []).map(r => [r.printer_id, r]));
+}
+
+export async function loadPrinterCameraTelemetry() {
+  const { data, error } = await supabase
+    .from('qp_printer_telemetry')
+    .select('printer_id,state,camera_jpeg,updated_at');
+  if (error) { console.error('loadPrinterCameraTelemetry:', error.message); return {}; }
   return Object.fromEntries((data || []).map(r => [r.printer_id, r]));
 }
 
