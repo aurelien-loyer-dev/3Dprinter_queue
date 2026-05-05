@@ -110,6 +110,9 @@ export function StatePill({ state, compact = false }) {
     soon_unavailable: { label: 'Bientôt indisponible', color: 'hsl(45, 62%, 36%)',  bg: 'hsl(50, 68%, 93%)'  },
     available:        { label: 'Disponible',           color: 'hsl(145, 50%, 30%)', bg: 'hsl(145, 42%, 93%)' },
     maintenance:      { label: 'En maintenance',       color: 'hsl(15, 62%, 38%)',  bg: 'hsl(15, 55%, 93%)'  },
+    paused:           { label: 'En pause',             color: 'hsl(210, 55%, 38%)', bg: 'hsl(210, 45%, 93%)' },
+    error:            { label: 'Erreur',               color: 'hsl(0, 62%, 38%)',   bg: 'hsl(0, 55%, 93%)'   },
+    offline:          { label: 'Hors ligne',           color: '#777',               bg: '#eee'               },
   };
   const s = map[state] || map.available;
   return (

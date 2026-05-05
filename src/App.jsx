@@ -17,6 +17,15 @@ function mergePrinterStatus(resStatus, tel) {
   return resStatus; // idle → on garde le planning
 }
 
+const kioskChipStyle = {
+  fontSize: 10, fontVariantNumeric: 'tabular-nums', fontWeight: 600,
+  padding: '2px 6px', borderRadius: 5,
+  background: 'rgba(255,255,255,0.08)',
+  color: 'rgba(255,255,255,0.55)',
+  border: '0.5px solid rgba(255,255,255,0.1)',
+  display: 'inline-flex', alignItems: 'center',
+};
+
 function swatchBorder(hex) {
   const r = parseInt(hex.slice(1, 3), 16) || 0;
   const g = parseInt(hex.slice(3, 5), 16) || 0;
@@ -809,14 +818,20 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
   const load = loadPct(reservations, printer.id);
 
   const effectiveState = maintenance ? 'maintenance' : status.state;
-  const isPrinting = effectiveState === 'printing' || effectiveState === 'soon_available';
+  const isPrinting  = effectiveState === 'printing' || effectiveState === 'soon_available';
+  const isPaused    = effectiveState === 'paused';
   const isAvailable = effectiveState === 'available';
-  const isSoon = effectiveState === 'soon_unavailable';
-  const isMaint = effectiveState === 'maintenance';
+  const isSoon      = effectiveState === 'soon_unavailable';
+  const isMaint     = effectiveState === 'maintenance';
+  const isError     = effectiveState === 'error';
+  const isOffline   = effectiveState === 'offline';
 
   const ph = (h, l = 48, s = 55) => `hsl(${h}, ${s}%, ${l}%)`;
-  const accent = isMaint         ? 'hsl(15, 65%, 44%)'
-    : isAvailable || isSoon      ? 'hsl(145, 52%, 46%)'
+  const accent = isMaint              ? 'hsl(15, 65%, 44%)'
+    : isError                         ? 'hsl(0, 65%, 48%)'
+    : isOffline                       ? '#555'
+    : isPaused                        ? 'hsl(210, 55%, 48%)'
+    : isAvailable || isSoon           ? 'hsl(145, 52%, 46%)'
     : ph(printer.hue);
 
   const border = 'rgba(255,255,255,0.06)';
@@ -852,6 +867,47 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
               )}
             </div>
           </div>
+        ) : isError ? (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
+            <Icon name="wrench" size={16} color="hsl(0, 68%, 58%)" stroke={1.8} style={{ marginTop: 2, flexShrink: 0 }} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'hsl(0, 68%, 62%)' }}>Erreur imprimante</div>
+              {telemetry?.error_code && (
+                <div style={{ fontSize: 11, color: 'hsl(0, 48%, 54%)', marginTop: 2 }}>Code {telemetry.error_code}</div>
+              )}
+              {telemetry?.current_stage != null && (
+                <div style={{ fontSize: 10, color: sub, marginTop: 2 }}>Étape {telemetry.current_stage}</div>
+              )}
+            </div>
+          </div>
+        ) : isOffline ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#666' }}>Hors ligne</div>
+          </div>
+        ) : isPaused ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <ArcProgress progress={status.progress || 0} hue={210} size={68} />
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                  {Math.round((status.progress || 0) * 100)}%
+                </span>
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: 'hsl(210, 65%, 62%)', lineHeight: 1 }}>En pause</div>
+              {currentJob && (
+                <div style={{ fontWeight: 700, fontSize: 12, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {currentJob.firstName} {currentJob.lastName}
+                </div>
+              )}
+              {telemetry?.nozzle_temp != null && (
+                <div style={{ fontSize: 10, color: sub, marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
+                  🌡 {telemetry.nozzle_temp}°{telemetry.bed_temp != null ? ` · lit ${telemetry.bed_temp}°` : ''}
+                </div>
+              )}
+            </div>
+          </div>
         ) : isPrinting ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -870,6 +926,24 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
               {currentJob && (
                 <div style={{ fontWeight: 700, fontSize: 12, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {currentJob.firstName} {currentJob.lastName}
+                </div>
+              )}
+              {/* Telemetry row */}
+              {telemetry && (telemetry.nozzle_temp != null || telemetry.layer_current != null) && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
+                  {telemetry.nozzle_temp != null && (
+                    <span style={kioskChipStyle}>
+                      🌡 {telemetry.nozzle_temp}°{telemetry.bed_temp != null ? `·${telemetry.bed_temp}°` : ''}
+                    </span>
+                  )}
+                  {telemetry.layer_current != null && telemetry.layer_total != null && (
+                    <span style={kioskChipStyle}>
+                      {telemetry.layer_current}/{telemetry.layer_total}
+                    </span>
+                  )}
+                  {telemetry.speed_level && (
+                    <span style={kioskChipStyle}>{telemetry.speed_level}</span>
+                  )}
                 </div>
               )}
             </div>

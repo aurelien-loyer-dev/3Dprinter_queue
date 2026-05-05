@@ -142,6 +142,23 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
             </div>
           </div>
         )}
+        {!maintenance && status.state === 'paused' && (
+          <div style={{ fontSize: 11.5, color: 'oklch(0.45 0.12 220)', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Icon name="clock" size={12} />
+            En pause
+          </div>
+        )}
+        {!maintenance && status.state === 'error' && (
+          <div style={{ fontSize: 11.5, color: 'oklch(0.5 0.18 25)', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Icon name="wrench" size={12} />
+            Erreur détectée{telemetry?.error_code ? ` (${telemetry.error_code})` : ''}
+          </div>
+        )}
+        {!maintenance && status.state === 'offline' && (
+          <div style={{ fontSize: 11.5, color: subText, display: 'flex', alignItems: 'center', gap: 5 }}>
+            Hors ligne
+          </div>
+        )}
         {!maintenance && status.state === 'available' && (
           <div style={{ fontSize: 11.5, color: 'oklch(0.5 0.13 145)', display: 'flex', alignItems: 'center', gap: 5 }}>
             <Icon name="check" size={12} />
@@ -152,6 +169,29 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
           <div style={{ fontSize: 11.5, color: 'oklch(0.5 0.14 80)', display: 'flex', alignItems: 'center', gap: 5 }}>
             <Icon name="clock" size={12} />
             Impression {fmtRelativeFuture(status.nextStartMin)}
+          </div>
+        )}
+
+        {/* Telemetry chips: temp, layers, speed */}
+        {telemetry && !maintenance && (telemetry.nozzle_temp != null || telemetry.layer_current != null || telemetry.error_code) && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 7 }}>
+            {telemetry.nozzle_temp != null && (
+              <TelChip dark={dark}>
+                <Icon name="thermometer" size={10} />
+                {telemetry.nozzle_temp}°{telemetry.bed_temp != null ? `·${telemetry.bed_temp}°` : ''}
+              </TelChip>
+            )}
+            {telemetry.layer_current != null && telemetry.layer_total != null && (
+              <TelChip dark={dark}>
+                {telemetry.layer_current}/{telemetry.layer_total} couches
+              </TelChip>
+            )}
+            {telemetry.speed_level && (status.state === 'printing' || status.state === 'paused') && (
+              <TelChip dark={dark}>{telemetry.speed_level}</TelChip>
+            )}
+            {telemetry.error_code != null && (
+              <TelChip dark={dark} error>Code {telemetry.error_code}</TelChip>
+            )}
           </div>
         )}
 
@@ -314,6 +354,27 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
         />
       </div>
     </div>
+  );
+}
+
+function TelChip({ dark, error, children }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 3,
+      fontSize: 10, fontVariantNumeric: 'tabular-nums',
+      padding: '2px 6px', borderRadius: 5,
+      background: error
+        ? (dark ? 'rgba(220,60,40,0.15)' : 'oklch(0.96 0.04 25)')
+        : (dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)'),
+      color: error
+        ? (dark ? 'oklch(0.7 0.18 25)' : 'oklch(0.48 0.18 25)')
+        : (dark ? 'rgba(255,255,255,0.6)' : 'rgba(29,29,31,0.6)'),
+      border: `0.5px solid ${error
+        ? (dark ? 'rgba(220,60,40,0.3)' : 'oklch(0.88 0.06 25)')
+        : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)')}`,
+    }}>
+      {children}
+    </span>
   );
 }
 
