@@ -3,7 +3,7 @@ import React from 'react';
 import {
   PRINTERS,
   computePrinterStatus,
-  printerById, findNextAvailable, getNextSlotOffset, printerColor,
+  printerById, findNextAvailable, getNextSlotOffset, printerColor, NOW_FIXED,
   fmtTime, fmtDuration, fmtDayLabel, fmtRelativeFuture,
 } from './data.js';
 import { Icon, Btn } from './ui.jsx';
@@ -27,8 +27,16 @@ export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reser
 
   const printer = printerById(printerId);
   const slotOffset = getNextSlotOffset(slotSize);
+  const currentSlotStart = -((NOW_FIXED.getHours() * 60 + NOW_FIXED.getMinutes()) % slotSize);
+  const currentSlotIsFree = !reservations.some(r =>
+    r.printerId === printerId &&
+    currentSlotStart < r.startMin + r.durationMin &&
+    currentSlotStart + durationMin > r.startMin
+  );
 
   const candidates = [];
+  if (currentSlotIsFree) candidates.push(currentSlotStart);
+
   let cursor = slotOffset;
   for (let i = 0; i < 5; i++) {
     const next = findNextAvailable(reservations, printerId, durationMin, slotSize, cursor, slotOffset);
@@ -187,7 +195,17 @@ export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reser
             </div>
 
             {/* Banner when no immediate slot */}
-            {candidates[0] > 0 && (
+            {currentSlotIsFree && currentSlotStart <= 0 ? (
+              <div style={{
+                marginBottom: 10, padding: '10px 14px', borderRadius: 10,
+                background: 'oklch(0.95 0.04 145)', border: '0.5px solid oklch(0.84 0.08 145)',
+                color: 'oklch(0.38 0.12 145)', fontSize: 12,
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <Icon name="check" size={13} />
+                Le créneau en cours est libre, tu peux réserver depuis maintenant.
+              </div>
+            ) : candidates[0] > 0 && (
               <div style={{
                 marginBottom: 10, padding: '10px 14px', borderRadius: 10,
                 background: 'oklch(0.97 0.04 80)', border: '0.5px solid oklch(0.88 0.06 80)',
