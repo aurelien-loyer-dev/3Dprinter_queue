@@ -33,12 +33,15 @@ export function computePrinterStatus(reservations, printerId) {
   );
 
   if (currentJob) {
+    // There is a reservation covering the current time. Do not claim the printer is
+    // "printing" just because a slot exists — telemetry controls that. Show
+    // a dedicated 'reserved' state so the UI displays "Réservé" when idle but
+    // booked. Progress is unknown until telemetry reports activity.
     const etaMin = currentJob.startMin + currentJob.durationMin - elapsedMin;
-    const progress = Math.min(1, (elapsedMin - currentJob.startMin) / currentJob.durationMin);
     return {
-      state: etaMin <= SOON_MIN ? 'soon_available' : 'printing',
+      state: 'reserved',
       etaMin,
-      progress,
+      progress: 0,
     };
   }
 
