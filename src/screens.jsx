@@ -223,7 +223,7 @@ export function RegisterScreen({ onRegister, onShowLogin, dark }) {
       <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <AuthField label="Login Epitech" value={login} onChange={e => { setLogin(e.target.value); setError(''); }}
           placeholder="prenom.nom@epitech.eu" error={!!error} autoFocus dark={dark} />
-        <AuthField label="Mot de passe (tu le choisiras)" type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
+        <AuthField label="Mot de passe" type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
           placeholder="6 caractères minimum" error={!!error} dark={dark} />
         <AuthField label="Confirmer le mot de passe" type="password" value={confirm} onChange={e => { setConfirm(e.target.value); setError(''); }}
           placeholder="••••••••" error={!!error} dark={dark} />
