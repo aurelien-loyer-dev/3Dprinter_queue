@@ -104,6 +104,7 @@ export default function App() {
   const [cameraTelemetryMap, setCameraTelemetryMap] = React.useState({});
   const [cameraFocusId, setCameraFocusId] = React.useState(null);
 
+  const isPublicCameraRoute = !isKiosk && pathname === CAMERA_PATH;
   const activeView = !isKiosk && pathname === CAMERA_PATH ? 'camera' : t.view;
   const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
 
@@ -407,7 +408,7 @@ export default function App() {
     );
   }
 
-  if (authLoading) {
+  if (authLoading && !isPublicCameraRoute) {
     return (
       <div style={{
         minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -420,7 +421,7 @@ export default function App() {
     );
   }
 
-  if (!me) {
+  if (!me && !isPublicCameraRoute) {
     return (
       <>
         <GlobalAnims />
@@ -459,7 +460,7 @@ export default function App() {
     return !maintenanceMap[p.id] && ['printing', 'paused'].includes(printerStatus[p.id].state) && (tel?.state === 'printing' || tel?.state === 'paused');
   });
 
-  const myUpcomingCount = reservationsForDisplay.filter(r => r.login === me.login && r.startMin + r.durationMin > 0).length;
+  const myUpcomingCount = me ? reservationsForDisplay.filter(r => r.login === me.login && r.startMin + r.durationMin > 0).length : 0;
   const todayCount = reservationsForDisplay.filter(r => r.startMin + r.durationMin > 0 && r.startMin < 24 * 60).length;
   const printingCount = PRINTERS.filter(p => ['printing', 'soon_available'].includes(printerStatus[p.id].state)).length;
   const availableCount = PRINTERS.filter(p => ['available', 'soon_unavailable'].includes(printerStatus[p.id].state)).length;
@@ -504,86 +505,94 @@ export default function App() {
 
         <div style={{ flex: 1 }} />
 
-        {/* Search */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '0 12px', height: 34,
-          borderRadius: 10, border: `0.5px solid ${border}`, background: fieldBg,
-          width: 240, color: sub,
-        }}>
-          <Icon name="search" size={14} />
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Rechercher un étudiant…"
-            style={{
-              flex: 1, height: '100%', border: 'none', background: 'transparent',
-              outline: 'none', fontSize: 12.5, color: fg, minWidth: 0,
-            }}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: sub, padding: 0, display: 'flex' }}
+        {me ? (
+          <>
+            {/* Search */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '0 12px', height: 34,
+              borderRadius: 10, border: `0.5px solid ${border}`, background: fieldBg,
+              width: 240, color: sub,
+            }}>
+              <Icon name="search" size={14} />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Rechercher un étudiant…"
+                style={{
+                  flex: 1, height: '100%', border: 'none', background: 'transparent',
+                  outline: 'none', fontSize: 12.5, color: fg, minWidth: 0,
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: sub, padding: 0, display: 'flex' }}
+                >
+                  <Icon name="close" size={12} />
+                </button>
+              )}
+            </div>
+
+            <Btn variant="secondary" size="sm" icon="sparkle" onClick={() => setStatsOpen(true)}>
+              Statistiques
+            </Btn>
+
+            <Btn variant="secondary" size="sm" icon="history" onClick={() => setMyResOpen(true)}>
+              Mes réservations
+              {myUpcomingCount > 0 && (
+                <span style={{
+                  marginLeft: 6, padding: '0 6px', height: 16, borderRadius: 999,
+                  background: '#1d1d1f', color: '#fff', fontSize: 10.5, fontWeight: 600,
+                  display: 'inline-flex', alignItems: 'center', fontVariantNumeric: 'tabular-nums',
+                }}>{myUpcomingCount}</span>
+              )}
+            </Btn>
+
+            <Btn
+              variant="secondary"
+              size="sm"
+              icon={activeView === 'camera' ? 'list' : 'grid'}
+              onClick={() => setAppView(activeView === 'camera' ? 'dashboard' : 'camera')}
             >
-              <Icon name="close" size={12} />
-            </button>
-          )}
-        </div>
+              {activeView === 'camera' ? 'Planning' : 'Caméras'}
+            </Btn>
 
-        <Btn variant="secondary" size="sm" icon="sparkle" onClick={() => setStatsOpen(true)}>
-          Statistiques
-        </Btn>
+            {me.isAdmin && (
+              <Btn variant="secondary" size="sm" icon="settings" onClick={() => setAdminPanelOpen(true)}>
+                Admin
+              </Btn>
+            )}
 
-        <Btn variant="secondary" size="sm" icon="history" onClick={() => setMyResOpen(true)}>
-          Mes réservations
-          {myUpcomingCount > 0 && (
-            <span style={{
-              marginLeft: 6, padding: '0 6px', height: 16, borderRadius: 999,
-              background: '#1d1d1f', color: '#fff', fontSize: 10.5, fontWeight: 600,
-              display: 'inline-flex', alignItems: 'center', fontVariantNumeric: 'tabular-nums',
-            }}>{myUpcomingCount}</span>
-          )}
-        </Btn>
+            <Btn variant="primary" size="sm" icon="plus" onClick={() => openReserve(null)}>Réserver</Btn>
 
-        <Btn
-          variant="secondary"
-          size="sm"
-          icon={activeView === 'camera' ? 'list' : 'grid'}
-          onClick={() => setAppView(activeView === 'camera' ? 'dashboard' : 'camera')}
-        >
-          {activeView === 'camera' ? 'Planning' : 'Caméras'}
-        </Btn>
-
-        {me.isAdmin && (
-          <Btn variant="secondary" size="sm" icon="settings" onClick={() => setAdminPanelOpen(true)}>
-            Admin
-          </Btn>
-        )}
-
-        <Btn variant="primary" size="sm" icon="plus" onClick={() => openReserve(null)}>Réserver</Btn>
-
-        {/* User */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 12, borderLeft: `0.5px solid ${border}` }}>
-          <Avatar first={me.firstName} last={me.lastName} size={30} />
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 500 }}>{me.firstName} {me.lastName}</div>
-            <div style={{ fontSize: 10.5, color: sub }}>{me.login}</div>
+            {/* User */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 12, borderLeft: `0.5px solid ${border}` }}>
+              <Avatar first={me.firstName} last={me.lastName} size={30} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 500 }}>{me.firstName} {me.lastName}</div>
+                <div style={{ fontSize: 10.5, color: sub }}>{me.login}</div>
+              </div>
+              <button
+                onClick={handleLogout}
+                title="Déconnexion"
+                style={{
+                  width: 28, height: 28, borderRadius: 7, border: 'none',
+                  background: 'transparent', color: sub, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = t.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <Icon name="logout" size={14} />
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ fontSize: 11.5, color: sub }}>
+            Vue publique caméras
           </div>
-          <button
-            onClick={handleLogout}
-            title="Déconnexion"
-            style={{
-              width: 28, height: 28, borderRadius: 7, border: 'none',
-              background: 'transparent', color: sub, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = t.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            <Icon name="logout" size={14} />
-          </button>
-        </div>
+        )}
       </header>
 
       {/* Main content */}
@@ -666,40 +675,44 @@ export default function App() {
           onChange={(v) => setTweak('slotSize', parseInt(v))} />
       </TweaksPanel>
 
-      <ReserveModal
-        open={reserveModalOpen}
-        onClose={() => setReserveModalOpen(false)}
-        onConfirm={handleReserve}
-        defaultPrinterId={reserveDefaultPrinter}
-        reservations={reservationsForDisplay}
-        slotSize={t.slotSize}
-        dark={t.dark}
-      />
+      {me && (
+        <>
+          <ReserveModal
+            open={reserveModalOpen}
+            onClose={() => setReserveModalOpen(false)}
+            onConfirm={handleReserve}
+            defaultPrinterId={reserveDefaultPrinter}
+            reservations={reservationsForDisplay}
+            slotSize={t.slotSize}
+            dark={t.dark}
+          />
 
-      <MyReservationsPanel
-        open={myResOpen}
-        onClose={() => setMyResOpen(false)}
-        reservations={reservations}
-        me={me}
-        onCancel={handleCancel}
-        dark={t.dark}
-      />
+          <MyReservationsPanel
+            open={myResOpen}
+            onClose={() => setMyResOpen(false)}
+            reservations={reservations}
+            me={me}
+            onCancel={handleCancel}
+            dark={t.dark}
+          />
 
-      <PrinterDetailPanel
-        open={!!detailPrinterId}
-        printerId={detailPrinterId}
-        onClose={() => setDetailPrinterId(null)}
-        reservations={reservationsForDisplay}
-        me={me}
-        onReserve={(id) => { setDetailPrinterId(null); openReserve(id); }}
-        onCancel={handleCancel}
-        dark={t.dark}
-        telemetry={detailPrinterId ? (telemetryMap[detailPrinterId] || null) : null}
-        maintenance={detailPrinterId ? (maintenanceMap[detailPrinterId] || null) : null}
-        onClaimRunningPrint={handleClaimRunningPrint}
-      />
+          <PrinterDetailPanel
+            open={!!detailPrinterId}
+            printerId={detailPrinterId}
+            onClose={() => setDetailPrinterId(null)}
+            reservations={reservationsForDisplay}
+            me={me}
+            onReserve={(id) => { setDetailPrinterId(null); openReserve(id); }}
+            onCancel={handleCancel}
+            dark={t.dark}
+            telemetry={detailPrinterId ? (telemetryMap[detailPrinterId] || null) : null}
+            maintenance={detailPrinterId ? (maintenanceMap[detailPrinterId] || null) : null}
+            onClaimRunningPrint={handleClaimRunningPrint}
+          />
+        </>
+      )}
 
-      {me.isAdmin && adminPanelOpen && (
+      {me?.isAdmin && adminPanelOpen && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 200,
           background: t.dark ? '#0a0a0a' : '#fafafa',
