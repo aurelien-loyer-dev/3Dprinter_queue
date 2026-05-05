@@ -16,6 +16,18 @@ function mergePrinterStatus(resStatus, tel) {
   return resStatus; // idle → on garde le planning
 }
 
+function normalizeRemainingMinutes(tel) {
+  const raw = Number(tel?.remaining_min);
+  if (!Number.isFinite(raw) || raw <= 0) return 30;
+
+  // Defensive heuristic: if telemetry sends a tiny integer (1..6) while
+  // progress is still low, it is likely hours from a unit mismatch.
+  const progress = Number(tel?.progress);
+  if (raw <= 6 && Number.isFinite(progress) && progress < 95) return Math.round(raw * 60);
+
+  return Math.round(raw);
+}
+
 const kioskChipStyle = {
   fontSize: 10, fontVariantNumeric: 'tabular-nums', fontWeight: 600,
   padding: '2px 6px', borderRadius: 5,
@@ -109,8 +121,8 @@ export default function App() {
       );
       if (hasActiveSlot) continue;
 
-      const remaining = Number.isFinite(Number(tel.remaining_min)) ? Number(tel.remaining_min) : 30;
-      const durationMin = Math.max(5, Math.ceil(Math.max(1, remaining)));
+      const remaining = normalizeRemainingMinutes(tel);
+      const durationMin = Math.max(5, Math.ceil(remaining));
       const startMin = Math.floor(elapsedMin);
 
       list.push({
@@ -319,8 +331,8 @@ export default function App() {
       return;
     }
 
-    const remaining = Number.isFinite(Number(tel.remaining_min)) ? Number(tel.remaining_min) : 30;
-    const durationMin = Math.max(5, Math.ceil(Math.max(1, remaining)));
+    const remaining = normalizeRemainingMinutes(tel);
+    const durationMin = Math.max(5, Math.ceil(remaining));
     const startMin = Math.floor(elapsedMin);
     const newRes = {
       id: `res-live-${Date.now()}`,
