@@ -8,6 +8,37 @@ function swatchBorder(hex) {
   const brightness = (r * 299 + g * 587 + b * 114) / 1000;
   return brightness > 160 ? '2px solid rgba(0,0,0,0.30)' : '1.5px solid rgba(255,255,255,0.12)';
 }
+
+function safeFilamentColor(hex) {
+  if (!hex || hex.length < 7) return null;
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (l > 0.38) return hex;
+  if (max === min) return 'rgba(255,255,255,0.75)';
+  const d = max - min;
+  const s = d / (l < 0.5 ? max + min : 2 - max - min);
+  let h = 0;
+  if (max === r)      h = ((g - b) / d % 6) * 60;
+  else if (max === g) h = ((b - r) / d + 2) * 60;
+  else                h = ((r - g) / d + 4) * 60;
+  if (h < 0) h += 360;
+  return `hsl(${Math.round(h)}, ${Math.round(s * 100)}%, 62%)`;
+}
+
+function parseActiveFilamentColor(telemetry) {
+  if (!telemetry?.ams_colors) return null;
+  try {
+    const parsed = JSON.parse(telemetry.ams_colors);
+    const colors = Array.isArray(parsed) ? parsed : parsed?.colors;
+    const active = Array.isArray(parsed) ? null : (parsed?.active ?? null);
+    if (!Array.isArray(colors) || !colors.length) return null;
+    const idx = (active != null && active >= 0 && active < colors.length) ? active : 0;
+    return safeFilamentColor(colors[idx]);
+  } catch { return null; }
+}
 import {
   findNextAvailable,
   getNextSlotOffset,
@@ -368,6 +399,7 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
           searchQuery={searchQuery}
           onSlotClick={maintenance ? null : ((min) => onSlotClick && onSlotClick(printer.id, min))}
           onItemCancel={onCancel}
+          activeFilamentColor={parseActiveFilamentColor(telemetry)}
         />
       </div>
     </div>
@@ -395,7 +427,7 @@ function TelChip({ dark, error, children }) {
   );
 }
 
-function Timeline({ hours, pixelsPerHour, slotSize, items, printer, status, me, dark, density, searchQuery, onSlotClick, onItemCancel }) {
+function Timeline({ hours, pixelsPerHour, slotSize, items, printer, status, me, dark, density, searchQuery, onSlotClick, onItemCancel, activeFilamentColor }) {
   const TIMELINE_HEIGHT = hours * pixelsPerHour;
   const slotsPerHour = 60 / slotSize;
   const slotHeight = pixelsPerHour / slotsPerHour;
@@ -508,6 +540,7 @@ function Timeline({ hours, pixelsPerHour, slotSize, items, printer, status, me, 
               highlighted={matchesSearch}
               density={density}
               onCancel={isMine ? onItemCancel : undefined}
+              liveFilamentColor={isLive ? activeFilamentColor : null}
             />
           );
         })}
@@ -516,21 +549,25 @@ function Timeline({ hours, pixelsPerHour, slotSize, items, printer, status, me, 
   );
 }
 
-function ReservationBlock({ r, top, height, hue, isMine, isLive, dark, dimmed, highlighted, density, onCancel }) {
+function ReservationBlock({ r, top, height, hue, isMine, isLive, dark, dimmed, highlighted, density, onCancel, liveFilamentColor }) {
   const [hover, setHover] = React.useState(false);
   const compact = density === 'compact' || height < 36;
 
-  const borderColor = isMine
-    ? printerColor(hue, 0.5, 0.16)
-    : `color-mix(in oklch, ${printerColor(hue)} 30%, transparent)`;
-  const bg = isMine
-    ? `color-mix(in oklch, ${printerColor(hue)} 18%, ${dark ? '#000' : '#fff'})`
-    : dark
-      ? `color-mix(in oklch, ${printerColor(hue)} 14%, rgba(0,0,0,0.7))`
-      : printerColorSoft(hue);
-  const textColor = isMine
-    ? `oklch(0.32 0.14 ${hue})`
-    : dark ? '#f5f5f7' : `oklch(0.35 0.10 ${hue})`;
+  // Créneau en cours → couleur filament ; futurs → neutre blanc/gris
+  const accentColor = isLive && liveFilamentColor ? liveFilamentColor : null;
+  const neutralFg   = dark ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.72)';
+  const neutralSub  = dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.42)';
+  const neutralBg   = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
+  const neutralBdr  = dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)';
+
+  const bg = accentColor
+    ? `color-mix(in srgb, ${accentColor} 18%, ${dark ? '#1a1a1a' : '#fff'})`
+    : neutralBg;
+  const leftBorder  = accentColor ?? neutralBdr;
+  const timeColor   = accentColor ?? neutralFg;
+  const nameColor   = accentColor
+    ? (dark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.55)')
+    : neutralSub;
 
   return (
     <div
@@ -541,12 +578,10 @@ function ReservationBlock({ r, top, height, hue, isMine, isLive, dark, dimmed, h
         top, left: 4, right: 4,
         height: `calc(max(${height}, 18px))`,
         background: bg,
-        border: `0.5px solid ${highlighted ? 'oklch(0.6 0.2 50)' : borderColor}`,
-        borderLeft: `3px solid ${printerColor(hue)}`,
+        border: `0.5px solid ${highlighted ? 'oklch(0.6 0.2 50)' : (accentColor ? `color-mix(in srgb, ${accentColor} 35%, transparent)` : neutralBdr)}`,
+        borderLeft: `3px solid ${leftBorder}`,
         borderRadius: 8,
         padding: compact ? '2px 7px' : '5px 8px',
-        fontSize: compact ? 10.5 : 11.5,
-        color: textColor,
         overflow: 'hidden',
         cursor: 'default',
         zIndex: hover ? 5 : 2,
@@ -557,7 +592,7 @@ function ReservationBlock({ r, top, height, hue, isMine, isLive, dark, dimmed, h
         transition: 'opacity 0.15s, box-shadow 0.15s, z-index 0s',
         display: 'flex',
         flexDirection: 'column',
-        gap: 1,
+        gap: compact ? 1 : 3,
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4, alignItems: 'baseline' }}>
@@ -566,22 +601,24 @@ function ReservationBlock({ r, top, height, hue, isMine, isLive, dark, dimmed, h
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           minWidth: 0,
           fontSize: compact ? 9.5 : 10,
+          color: nameColor,
         }}>
           {r.firstName} {r.lastName}
         </span>
         {!compact && (
-          <span style={{ fontSize: 9, opacity: 0.65, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+          <span style={{ fontSize: 9, color: nameColor, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
             {fmtDuration(r.durationMin)}
           </span>
         )}
       </div>
       {!compact && (
         <div style={{
-          fontSize: 14, opacity: 0.85, fontVariantNumeric: 'tabular-nums', fontWeight: 600,
+          fontSize: 14, fontVariantNumeric: 'tabular-nums', fontWeight: 600,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          color: timeColor,
         }}>
           {fmtTime(r.startMin)}–{fmtTime(r.startMin + r.durationMin)}
-          {isLive && <span style={{ marginLeft: 6, color: 'oklch(0.55 0.18 25)', fontWeight: 700 }}>● en cours</span>}
+          {isLive && <span style={{ marginLeft: 6, color: accentColor ?? 'oklch(0.55 0.18 25)', fontWeight: 700 }}>● en cours</span>}
         </div>
       )}
       {isMine && hover && onCancel && (
