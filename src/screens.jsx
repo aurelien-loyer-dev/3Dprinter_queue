@@ -5,7 +5,6 @@ import {
   computePrinterStatus,
   printerById, printerColor,
   fmtTime, fmtDuration, fmtDayLabel, fmtRelativeFuture,
-  loadPct,
 } from './data.js';
 import { Icon, Avatar, Btn, StatePill } from './ui.jsx';
 
@@ -426,7 +425,6 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
 
   const upcoming = items.filter(r => r.startMin + r.durationMin > 0);
   const recent = items.filter(r => r.startMin + r.durationMin <= 0).reverse().slice(0, 5);
-  const load = loadPct(reservations, printerId);
   const currentJob = upcoming.find(r => r.startMin <= 0);
   const currentJobIsUnassigned = !!currentJob && !currentJob.login;
 
@@ -610,8 +608,7 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
 
         {/* Stats */}
         <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-            <Stat icon="sparkle" label="Charge 24h"   value={`${Math.round(load * 100)}%`}               sub={sub} fg={fg} bg={fieldBg} border={border} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
             <Stat icon="clock"   label="Réservations" value={upcoming.filter(r => r.startMin > 0).length} sub={sub} fg={fg} bg={fieldBg} border={border} />
           </div>
 

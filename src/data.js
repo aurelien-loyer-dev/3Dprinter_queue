@@ -140,18 +140,3 @@ export function findNextAvailable(reservations, printerId, durationMin, slotSize
   }
   return cursor;
 }
-
-export function loadPct(reservations, printerId) {
-  const horizon = 24 * 60;
-  const items = reservations.filter(r =>
-    r.printerId === printerId &&
-    r.startMin + r.durationMin > 0 &&
-    r.startMin < horizon
-  );
-  const booked = items.reduce((sum, r) => {
-    const start = Math.max(0, r.startMin);
-    const end   = Math.min(horizon, r.startMin + r.durationMin);
-    return sum + Math.max(0, end - start);
-  }, 0);
-  return Math.min(1, booked / horizon);
-}

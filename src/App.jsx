@@ -47,7 +47,7 @@ function swatchBorder(hex) {
 import {
   PRINTERS, NOW_FIXED,
   computePrinterStatus,
-  printerById, printerColor, loadPct,
+  printerById, printerColor,
   fmtTime, fmtDuration, fmtRelativeFuture,
 } from './data.js';
 import {
@@ -1113,8 +1113,6 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
     hourMarkers.push({ pct, label: `${String(new Date(ms).getHours()).padStart(2, '0')}:00` });
   }
 
-  const load = loadPct(reservations, printer.id);
-
   const effectiveState = maintenance ? 'maintenance' : status.state;
   const isPrinting  = effectiveState === 'printing' || effectiveState === 'soon_available';
   const isPaused    = effectiveState === 'paused';
@@ -1269,20 +1267,9 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
             <div style={{ fontSize: 20, fontWeight: 800, color: 'hsl(145, 68%, 60%)' }}>Disponible</div>
           </div>
         )}
-
-        {/* Barre de charge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-          <div style={{ flex: 1, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
-            <div style={{ width: `${load * 100}%`, height: '100%', background: accent, borderRadius: 999 }} />
-          </div>
-          <span style={{ fontSize: 10, color: sub, fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
-            {Math.round(load * 100)}%
-          </span>
-        </div>
-
         {/* Filaments — pastilles colorées sans nom */}
         {printerFilaments.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
             {printerFilaments.map(c => (
               <div key={c.id} title={c.color_name} style={{
                 width: 24, height: 24, borderRadius: 6,
@@ -1359,7 +1346,6 @@ function ListRow({ printer, status, reservations, me, onPrinterClick, onReserveC
   const upcoming = reservations
     .filter(r => r.printerId === printer.id && r.startMin + r.durationMin > 0 && r.startMin < 24 * 60)
     .sort((a, b) => a.startMin - b.startMin);
-  const load = loadPct(reservations, printer.id);
 
   return (
     <div style={{
@@ -1402,10 +1388,6 @@ function ListRow({ printer, status, reservations, me, onPrinterClick, onReserveC
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <div style={{ fontSize: 11, color: sub, textAlign: 'right' }}>
-            <div>charge 24h</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: fg, fontVariantNumeric: 'tabular-nums' }}>{Math.round(load * 100)}%</div>
-          </div>
           <Btn variant="primary" size="sm" icon="plus" onClick={(e) => { e.stopPropagation(); onReserveClick(printer.id); }}>
             Réserver
           </Btn>
