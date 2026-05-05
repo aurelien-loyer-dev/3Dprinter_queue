@@ -836,9 +836,12 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
     : isAvailable || isSoon           ? 'hsl(145, 52%, 46%)'
     : ph(printer.hue);
 
-  const remainingLabel = isPrinting
-    ? fmtRelativeFuture(status.etaMin)
-    : fmtRelativeFuture(status.nextStartMin ?? 0);
+  const remainingLabel = (() => {
+    const minutes = isPrinting ? status.etaMin : status.nextStartMin ?? 0;
+    if (minutes == null) return '--';
+    const label = fmtRelativeFuture(minutes);
+    return label === 'maintenant' ? '0min' : label;
+  })();
 
   const border = 'rgba(255,255,255,0.06)';
   const sub    = 'rgba(255,255,255,0.4)';
