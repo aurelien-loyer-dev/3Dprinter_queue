@@ -1447,35 +1447,41 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
             const visEnd    = Math.min(r.startMin + r.durationMin, elapsedMin + windowMin);
             const topPx     = Math.round((visStart - elapsedMin) / windowMin * TOTAL_HEIGHT_PX);
             const heightPx  = Math.round((visEnd - visStart) / windowMin * TOTAL_HEIGHT_PX);
-            const minHeight = 20; // px — ensure visible on TV browsers
+            const minHeight = 20;
             const finalHeight = Math.max(heightPx, minHeight);
             const isLive    = r.startMin <= elapsedMin;
-              const isTiny = finalHeight < 28;
-              const isCompact = finalHeight < 40;
-              const nameFont = isTiny ? 7.5 : isCompact ? 8.5 : 9;
-              const timeFont = isTiny ? 10 : isCompact ? 12 : 16;
+            const isTiny    = finalHeight < 28;
+            const isCompact = finalHeight < 40;
+            const nameFont  = isTiny ? 7.5 : isCompact ? 8.5 : 9;
+            const timeFont  = isTiny ? 10 : isCompact ? 12 : 16;
+            // Créneau actuel → couleur filament ; suivants → blanc neutre
+            const blockColor   = isLive && activeFilamentColor ? activeFilamentColor : 'rgba(255,255,255,0.18)';
+            const borderColor  = isLive && activeFilamentColor ? activeFilamentColor : 'rgba(255,255,255,0.45)';
+            const bgColor      = isLive && activeFilamentColor
+              ? `color-mix(in srgb, ${activeFilamentColor} 22%, transparent)`
+              : 'rgba(255,255,255,0.06)';
             return (
               <div key={r.id} style={{
                 position: 'absolute',
                 top: `${topPx}px`, height: `${finalHeight}px`,
                 left: 34, right: 4,
-                background: isLive ? ph(printer.hue, 40, 58) : ph(printer.hue, 28, 44),
-                borderLeft: `3px solid ${ph(printer.hue, 60, 72)}`,
+                background: bgColor,
+                borderLeft: `3px solid ${borderColor}`,
                 borderRadius: 5, overflow: 'hidden',
-                  padding: isTiny ? '1px 5px' : '3px 7px', zIndex: 2,
-                  display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                padding: isTiny ? '1px 5px' : '3px 7px', zIndex: 2,
+                display: 'flex', flexDirection: 'column', justifyContent: 'center',
               }}>
-                  {!isTiny && (
-                    <div style={{ fontSize: nameFont, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff', lineHeight: 1.05 }}>
-                      {r.firstName} {r.lastName}
-                    </div>
-                  )}
-                  <div style={{ fontSize: timeFont, fontWeight: 800, color: '#fff', fontVariantNumeric: 'tabular-nums', lineHeight: 1, whiteSpace: 'nowrap' }}>
-                    {isTiny
-                      ? `${fmtTimeRound(r.startMin)}–${fmtTimeRound(r.startMin + r.durationMin)}`
-                      : `${fmtTime(r.startMin)}–${fmtTime(r.startMin + r.durationMin)}`}
+                {!isTiny && (
+                  <div style={{ fontSize: nameFont, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff', lineHeight: 1.05 }}>
+                    {r.firstName} {r.lastName}
                   </div>
-                {isLive && <div style={{ fontSize: 9, color: ph(printer.hue, 78, 80), fontWeight: 700, marginTop: 1 }}>● EN COURS</div>}
+                )}
+                <div style={{ fontSize: timeFont, fontWeight: 800, color: blockColor, fontVariantNumeric: 'tabular-nums', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                  {isTiny
+                    ? `${fmtTimeRound(r.startMin)}–${fmtTimeRound(r.startMin + r.durationMin)}`
+                    : `${fmtTime(r.startMin)}–${fmtTime(r.startMin + r.durationMin)}`}
+                </div>
+                {isLive && <div style={{ fontSize: 9, color: blockColor, fontWeight: 700, marginTop: 1 }}>● EN COURS</div>}
               </div>
             );
           })}
