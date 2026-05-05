@@ -9,7 +9,7 @@ function swatchBorder(hex) {
   return brightness > 160 ? '2px solid rgba(0,0,0,0.30)' : '1.5px solid rgba(255,255,255,0.12)';
 }
 import {
-  loadPct, findNextAvailable,
+  findNextAvailable,
   getNextSlotOffset,
   printerColor, printerColorSoft,
   fmtTime, fmtTimeRound, fmtDuration, fmtRelativeFuture,
@@ -67,7 +67,6 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
     .filter(r => r.startMin + r.durationMin > 0 && r.startMin < HOURS * 60)
     .sort((a, b) => a.startMin - b.startMin);
 
-  const load = loadPct(allReservations, printer.id);
   const nextStart = findNextAvailable(allReservations, printer.id, slotSize, slotSize, slotOffset, slotOffset);
   const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
   const currentJob = items.find(r => r.startMin <= elapsedMin && r.startMin + r.durationMin > elapsedMin);
@@ -213,16 +212,6 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
             )}
           </div>
         )}
-
-        <div style={{ marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 10.5, color: subText }}>
-          <span>Charge 24h</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 50, height: 3, borderRadius: 999, background: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-              <div style={{ width: `${load * 100}%`, height: '100%', background: printerColor(printer.hue, 0.65, 0.1), borderRadius: 999 }} />
-            </div>
-            <span style={{ fontVariantNumeric: 'tabular-nums', color: fgText, fontWeight: 500, minWidth: 28, textAlign: 'right' }}>{Math.round(load * 100)}%</span>
-          </div>
-        </div>
 
         {filamentColors.length > 0 && (
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${border}` }}>
