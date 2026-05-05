@@ -785,7 +785,6 @@ export default function App() {
               reservations={reservations}
               me={me}
               maintenanceMap={maintenanceMap}
-              telemetryMap={telemetryMap}
               onReservationDeleted={(id) => setReservations(prev => prev.filter(r => r.id !== id))}
               onDeleteAllReservations={handleDeleteAllReservations}
             />

@@ -347,13 +347,3 @@ export function subscribeToPrinterTelemetry(onRefresh) {
     }
   };
 }
-
-// ── Commandes imprimante ───────────────────────────────────────────────────────
-
-export async function sendPrinterCommand(printerId, command) {
-  const { error } = await supabase
-    .from('qp_printer_commands')
-    .insert({ printer_id: printerId, command });
-  if (error) { maybeLogDbError('sendPrinterCommand', error); return false; }
-  return true;
-}
