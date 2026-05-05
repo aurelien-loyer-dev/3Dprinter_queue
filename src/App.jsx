@@ -19,12 +19,6 @@ function mergePrinterStatus(resStatus, tel) {
 function normalizeRemainingMinutes(tel) {
   const raw = Number(tel?.remaining_min);
   if (!Number.isFinite(raw) || raw <= 0) return 30;
-
-  // Defensive heuristic: if telemetry sends a tiny integer (1..6) while
-  // progress is still low, it is likely hours from a unit mismatch.
-  const progress = Number(tel?.progress);
-  if (raw <= 6 && Number.isFinite(progress) && progress < 95) return Math.round(raw * 60);
-
   return Math.round(raw);
 }
 
@@ -441,7 +435,7 @@ export default function App() {
     return (
       <>
         <GlobalAnims />
-        <KioskView reservations={reservations} loading={loadingReservations} maintenanceMap={maintenanceMap} wsStatus={wsStatus} telemetryMap={telemetryMap} />
+        <KioskView reservations={reservationsForDisplay} loading={loadingReservations} maintenanceMap={maintenanceMap} wsStatus={wsStatus} telemetryMap={telemetryMap} />
       </>
     );
   }
