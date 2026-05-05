@@ -18,8 +18,9 @@ function mergePrinterStatus(resStatus, tel) {
 
 function normalizeRemainingMinutes(tel) {
   const raw = Number(tel?.remaining_min);
-  if (!Number.isFinite(raw) || raw <= 0) return 30;
-  return Math.round(raw);
+  if (!Number.isFinite(raw)) return 30;  // donnée absente → fallback
+  if (raw <= 0) return 0;               // quasi-fini → 0 affiché "maintenant"
+  return Math.max(1, Math.round(raw));
 }
 
 const kioskChipStyle = {
