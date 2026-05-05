@@ -9,7 +9,7 @@ import {
 } from './supabase.js';
 import { Icon, Btn } from './ui.jsx';
 
-export function AdminPanel({ dark, reservations, onReservationDeleted, onDeleteAllReservations, me, maintenanceMap = {}, telemetryMap = {} }) {
+export function AdminPanel({ dark, reservations, onReservationDeleted, onDeleteAllReservations, me, maintenanceMap = {}, telemetryMap = {}, onMaintenanceChange }) {
   const [loading, setLoading] = React.useState(false);
 
   const handleDeleteReservation = async (id) => {
@@ -110,6 +110,7 @@ export function AdminPanel({ dark, reservations, onReservationDeleted, onDeleteA
                   printer={printer}
                   maintenance={maintenanceMap[printer.id] || null}
                   me={me}
+                  onRefresh={onMaintenanceChange}
                   dark={dark}
                   border={border}
                   fg={fg}
@@ -186,7 +187,7 @@ export function AdminPanel({ dark, reservations, onReservationDeleted, onDeleteA
   );
 }
 
-function MaintenanceCard({ printer, maintenance, me, dark, border, fg, sub, fieldBg, cardBg }) {
+function MaintenanceCard({ printer, maintenance, me, onRefresh, dark, border, fg, sub, fieldBg, cardBg }) {
   const [expanded, setExpanded] = React.useState(false);
   const [message, setMessage] = React.useState('');
   const [returnAt, setReturnAt] = React.useState('');
@@ -198,6 +199,7 @@ function MaintenanceCard({ printer, maintenance, me, dark, border, fg, sub, fiel
     if (!message.trim()) return;
     setLoading(true);
     await setMaintenance(printer.id, message.trim(), returnAt || null, me);
+    onRefresh?.();
     setExpanded(false);
     setMessage('');
     setReturnAt('');
@@ -207,6 +209,7 @@ function MaintenanceCard({ printer, maintenance, me, dark, border, fg, sub, fiel
   const handleClear = async () => {
     setLoading(true);
     await clearMaintenance(printer.id);
+    onRefresh?.();
     setLoading(false);
   };
 

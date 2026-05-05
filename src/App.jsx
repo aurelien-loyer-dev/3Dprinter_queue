@@ -195,15 +195,18 @@ export default function App() {
     return () => channel.unsubscribe();
   }, []);
 
-  // Maintenance — chargement + realtime
-  React.useEffect(() => {
-    const refresh = () => loadMaintenance().then(rows =>
+  // Maintenance — chargement + realtime + polling fallback
+  const refreshMaintenance = React.useCallback(() =>
+    loadMaintenance().then(rows =>
       setMaintenanceMap(Object.fromEntries(rows.map(r => [r.printer_id, r])))
-    );
-    refresh();
-    const channel = subscribeToMaintenance(refresh);
-    return () => channel.unsubscribe();
-  }, []);
+    ), []);
+
+  React.useEffect(() => {
+    refreshMaintenance();
+    const channel = subscribeToMaintenance(refreshMaintenance);
+    const poll = setInterval(refreshMaintenance, 10_000);
+    return () => { channel.unsubscribe(); clearInterval(poll); };
+  }, [refreshMaintenance]);
 
   // Filament colors — chargement + realtime
   React.useEffect(() => {
@@ -786,6 +789,7 @@ export default function App() {
               me={me}
               maintenanceMap={maintenanceMap}
               telemetryMap={telemetryMap}
+              onMaintenanceChange={refreshMaintenance}
               onReservationDeleted={(id) => setReservations(prev => prev.filter(r => r.id !== id))}
               onDeleteAllReservations={handleDeleteAllReservations}
             />
