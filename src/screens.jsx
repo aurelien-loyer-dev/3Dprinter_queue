@@ -401,10 +401,11 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
   const printer = printerById(printerId);
   const resStatus = computePrinterStatus(reservations, printerId);
 
-  // Merge telemetry (< 2 min) over reservation-based status
-  const tel = telemetry && (Date.now() - new Date(telemetry.updated_at).getTime() < 120_000) ? telemetry : null;
+  const tel = telemetry;
+  const telAgeMs = tel?.updated_at ? Date.now() - new Date(tel.updated_at).getTime() : null;
+  const telIsFresh = telAgeMs == null || telAgeMs < 120_000;
   const status = (() => {
-    if (!tel) return resStatus;
+    if (!tel || !telIsFresh) return resStatus;
     if (tel.state === 'printing') return { ...resStatus, state: 'printing', progress: Math.min(1, (tel.progress || 0) / 100), etaMin: tel.remaining_min ?? resStatus.etaMin, fromTelemetry: true };
     if (tel.state === 'paused')  return { state: 'paused',  fromTelemetry: true };
     if (tel.state === 'error')   return { state: 'error',   fromTelemetry: true };
@@ -573,6 +574,11 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: sub, marginBottom: 12 }}>
               Télémétrie en direct
             </div>
+            {!telIsFresh && (
+              <div style={{ fontSize: 11.5, color: dark ? 'oklch(0.74 0.14 70)' : 'oklch(0.54 0.12 65)', marginBottom: 10 }}>
+                Donnée ancienne, mise à jour {tel.updated_at ? new Date(tel.updated_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'inconnue'}
+              </div>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {tel.nozzle_temp != null && (
                 <TelStat label="Buse" value={`${tel.nozzle_temp}°C`} icon="thermometer" accent={tel.nozzle_temp > 180 ? 'oklch(0.58 0.18 25)' : undefined} dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
@@ -593,7 +599,7 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
                 <TelStat label="Restant" value={`${tel.remaining_min} min`} icon="clock" dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
               )}
             </div>
-            {tel.updated_at && (
+            {tel.updated_at && telIsFresh && (
               <div style={{ fontSize: 10.5, color: sub, marginTop: 10, opacity: 0.7 }}>
                 Mis à jour {new Date(tel.updated_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </div>
