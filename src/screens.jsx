@@ -598,11 +598,11 @@ export function PrinterDetailPanel({ open, printerId, onClose, reservations, me,
               {tel.layer_current != null && tel.layer_total != null && (
                 <TelStat label="Couche" value={`${tel.layer_current} / ${tel.layer_total}`} icon="sparkle" dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
               )}
-              {tel.speed_level && (
-                <TelStat label="Vitesse" value={tel.speed_level} icon="sparkle" dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
-              )}
               {tel.remaining_min != null && (isPrinting || isPaused) && (
-                <TelStat label="Restant" value={`${tel.remaining_min} min`} icon="clock" dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
+                <TelStat label="Restant" value={fmtDuration(tel.remaining_min)} icon="clock" dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
+              )}
+              {tel.current_file && (isPrinting || isPaused) && (
+                <TelStat label="Fichier" value={tel.current_file.replace(/\.gcode$/i, '')} icon="sparkle" dark={dark} fg={fg} sub={sub} bg={chipBg} border={chipBorder} />
               )}
             </div>
             {tel.updated_at && telIsFresh && (

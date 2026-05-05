@@ -78,6 +78,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 const isKiosk = new URLSearchParams(window.location.search).get('kiosk') === '1';
+const RESERVATION_LIMIT_24H = 5;
 const CAMERA_PATH = '/camera';
 const HOME_PATH = '/';
 
@@ -297,6 +298,16 @@ export default function App() {
   }, [me]);
 
   const handleReserve = async ({ printerId, startMin, durationMin, project }) => {
+    if (myReservationCount24h >= RESERVATION_LIMIT_24H) {
+      setReserveModalOpen(false);
+      setNotif({
+        title: 'Limite atteinte',
+        message: `Tu as déjà ${RESERVATION_LIMIT_24H} réservations sur 24h, toutes imprimantes confondues.`,
+        icon: 'clock', tone: 'warn',
+      });
+      return;
+    }
+
     const newRes = {
       id: `res-${Date.now()}`,
       printerId, login: me.login,
@@ -327,6 +338,15 @@ export default function App() {
 
   const handleClaimRunningPrint = async (printerId) => {
     if (!me) return;
+    if (myReservationCount24h >= RESERVATION_LIMIT_24H) {
+      setNotif({
+        title: 'Limite atteinte',
+        message: `Tu as déjà ${RESERVATION_LIMIT_24H} réservations sur 24h, toutes imprimantes confondues.`,
+        icon: 'clock', tone: 'warn',
+      });
+      return;
+    }
+
     const tel = telemetryMap[printerId];
     if (!tel || !['printing', 'paused'].includes(tel.state)) {
       setNotif({
@@ -399,6 +419,21 @@ export default function App() {
     setReserveModalOpen(true);
   };
 
+  const handleDeleteAllReservations = async () => {
+    const allReservations = reservations;
+    if (allReservations.length === 0) return;
+    if (!window.confirm(`Supprimer toutes les réservations (${allReservations.length}) ?`)) return;
+
+    await Promise.all(allReservations.map(r => deleteReservation(r.id)));
+    const refreshed = await loadReservations();
+    setReservations(refreshed);
+    setNotif({
+      title: 'Réservations supprimées',
+      message: 'Toutes les réservations ont été effacées.',
+      icon: 'trash', tone: 'success',
+    });
+  };
+
   if (isKiosk) {
     return (
       <>
@@ -462,6 +497,9 @@ export default function App() {
 
   const myUpcomingCount = me ? reservationsForDisplay.filter(r => r.login === me.login && r.startMin + r.durationMin > 0).length : 0;
   const todayCount = reservationsForDisplay.filter(r => r.startMin + r.durationMin > 0 && r.startMin < 24 * 60).length;
+  const myReservationCount24h = me
+    ? reservations.filter(r => r.login === me.login && r.startMin + r.durationMin > 0 && r.startMin < 24 * 60).length
+    : 0;
   const printingCount = PRINTERS.filter(p => ['printing', 'soon_available'].includes(printerStatus[p.id].state)).length;
   const availableCount = PRINTERS.filter(p => ['available', 'soon_unavailable'].includes(printerStatus[p.id].state)).length;
 
@@ -685,6 +723,8 @@ export default function App() {
             reservations={reservationsForDisplay}
             slotSize={t.slotSize}
             dark={t.dark}
+            reservationCount24h={myReservationCount24h}
+            reservationLimit={RESERVATION_LIMIT_24H}
           />
 
           <MyReservationsPanel
@@ -746,6 +786,7 @@ export default function App() {
               me={me}
               maintenanceMap={maintenanceMap}
               onReservationDeleted={(id) => setReservations(prev => prev.filter(r => r.id !== id))}
+              onDeleteAllReservations={handleDeleteAllReservations}
             />
           </div>
         </div>

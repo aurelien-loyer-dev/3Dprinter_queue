@@ -8,7 +8,7 @@ import {
 } from './data.js';
 import { Icon, Btn } from './ui.jsx';
 
-export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reservations, slotSize, dark }) {
+export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reservations, slotSize, dark, reservationCount24h = 0, reservationLimit = 5 }) {
   const [printerId, setPrinterId] = React.useState(defaultPrinterId || PRINTERS[0].id);
   const [durationMin, setDurationMin] = React.useState(60);
   const [project, setProject] = React.useState('');
@@ -57,6 +57,7 @@ export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reser
   // Duration presets in minutes, displayed in hours
   const durationOptions = [30, 60, 90, 120, 180, 240, 360, 480];
   const firstFutureIdx = candidates.findIndex(s => s > 0);
+  const limitReached = reservationCount24h >= reservationLimit;
 
   return (
     <div
@@ -267,6 +268,9 @@ export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reser
         }}>
           <div style={{ fontSize: 11.5, color: subText }}>
             {fmtDuration(durationMin)} · {Math.ceil(durationMin / slotSize)} créneau{Math.ceil(durationMin / slotSize) > 1 ? 'x' : ''} de {slotSize}min
+            <span style={{ marginLeft: 8, color: limitReached ? 'oklch(0.5 0.18 25)' : subText }}>
+              {reservationCount24h}/{reservationLimit} réservations sur 24h
+            </span>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <Btn variant="ghost" size="md" onClick={onClose}>Annuler</Btn>
@@ -274,6 +278,7 @@ export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reser
               variant="primary"
               size="md"
               icon="check"
+              disabled={limitReached}
               onClick={() => onConfirm({ printerId, startMin, durationMin, project: project || 'Impression' })}
             >
               Confirmer

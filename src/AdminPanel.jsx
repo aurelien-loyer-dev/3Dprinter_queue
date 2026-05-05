@@ -10,7 +10,7 @@ import {
 } from './supabase.js';
 import { Icon, Btn } from './ui.jsx';
 
-export function AdminPanel({ dark, reservations, onReservationDeleted, me, maintenanceMap = {} }) {
+export function AdminPanel({ dark, reservations, onReservationDeleted, onDeleteAllReservations, me, maintenanceMap = {} }) {
   const [filamentColors, setFilamentColors] = React.useState([]);
   const [newColor, setNewColor] = React.useState({ printerId: PRINTERS[0].id, name: '', hex: '#FF0000' });
   const [loading, setLoading] = React.useState(false);
@@ -50,6 +50,13 @@ export function AdminPanel({ dark, reservations, onReservationDeleted, me, maint
       }
       setLoading(false);
     }
+  };
+
+  const handleDeleteAllReservations = async () => {
+    if (!onDeleteAllReservations) return;
+    setLoading(true);
+    await onDeleteAllReservations();
+    setLoading(false);
   };
 
   const bg = dark ? '#0a0a0a' : '#fafafa';
@@ -253,7 +260,18 @@ export function AdminPanel({ dark, reservations, onReservationDeleted, me, maint
 
           {/* Reservations Section */}
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Réservations</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>Réservations</h2>
+              <Btn
+                variant="danger"
+                size="sm"
+                icon="trash"
+                onClick={handleDeleteAllReservations}
+                disabled={loading || reservations.length === 0}
+              >
+                Tout supprimer
+              </Btn>
+            </div>
             <div style={{
               background: cardBg, border: `0.5px solid ${border}`,
               borderRadius: 14, overflow: 'hidden', maxHeight: '70vh', overflowY: 'auto',
