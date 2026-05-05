@@ -134,13 +134,22 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
         )}
 
         {!maintenance && (status.state === 'printing' || status.state === 'soon_available') && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: subText, marginBottom: 5 }}>
-              <span style={{ fontVariantNumeric: 'tabular-nums', color: fgText, fontWeight: 500 }}>{Math.round(status.progress * 100)}%</span>
-              <span style={{ fontVariantNumeric: 'tabular-nums' }}>fin {fmtRelativeFuture(status.etaMin)}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ position: 'relative', width: 56, height: 56, flexShrink: 0 }}>
+              <svg viewBox="0 0 56 56" width="56" height="56" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx="28" cy="28" r="22" fill="none" stroke={dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} strokeWidth="6" />
+                <circle
+                  cx="28" cy="28" r="22" fill="none"
+                  stroke={printerColor(printer.hue)} strokeWidth="6" strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 22 * Math.max(0, Math.min(1, status.progress || 0))} ${2 * Math.PI * 22}`}
+                />
+              </svg>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: fgText, fontVariantNumeric: 'tabular-nums' }}>
+                {Math.round((status.progress || 0) * 100)}%
+              </div>
             </div>
-            <div style={{ height: 3, borderRadius: 999, background: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-              <div style={{ width: `${status.progress * 100}%`, height: '100%', background: printerColor(printer.hue), borderRadius: 999, transition: 'width 0.4s ease' }} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: subText, fontVariantNumeric: 'tabular-nums' }}>fin {fmtRelativeFuture(status.etaMin)}</div>
             </div>
           </div>
         )}
