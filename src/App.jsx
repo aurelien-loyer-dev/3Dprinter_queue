@@ -1118,6 +1118,34 @@ function ArcProgress({ progress, hue, size = 90 }) {
   );
 }
 
+function RingProgress({ progress, hue, size = 72, strokeWidth = 8, label, textColor = '#f5f5f7' }) {
+  const r = (size - strokeWidth) / 2;
+  const circ = 2 * Math.PI * r;
+  const safeProgress = Math.min(1, Math.max(0, progress || 0));
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeWidth} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke={`hsl(${hue}, 62%, 62%)`} strokeWidth={strokeWidth} strokeLinecap="round"
+        strokeDasharray={`${circ * safeProgress} ${circ}`}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dasharray 2s ease' }}
+      />
+      <text
+        x="50%" y="50%"
+        textAnchor="middle" dominantBaseline="middle"
+        fill={textColor}
+        fontSize={Math.max(10, Math.round(size * 0.2))}
+        fontWeight="700"
+        fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif"
+      >
+        {label ?? `${Math.round(safeProgress * 100)}%`}
+      </text>
+    </svg>
+  );
+}
+
 function KioskPrinterCard({ printer, status, reservations, maintenance, telemetry }) {
   const [dbColors, setDbColors] = React.useState([]);
   React.useEffect(() => {
@@ -1223,14 +1251,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
           </div>
         ) : isPaused ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <ArcProgress progress={status.progress || 0} hue={210} size={68} />
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                  {Math.round((status.progress || 0) * 100)}%
-                </span>
-              </div>
-            </div>
+            <RingProgress progress={status.progress || 0} hue={210} size={72} strokeWidth={8} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: 'hsl(210, 65%, 62%)', lineHeight: 1 }}>En pause</div>
               {currentJob && (
@@ -1247,14 +1268,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
           </div>
         ) : isPrinting ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <ArcProgress progress={status.progress} hue={printer.hue} size={68} />
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                  {Math.round(status.progress * 100)}%
-                </span>
-              </div>
-            </div>
+            <RingProgress progress={status.progress} hue={printer.hue} size={72} strokeWidth={8} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.05 }}>
                 {isPrinting ? 'En impression' : 'Impression'}
