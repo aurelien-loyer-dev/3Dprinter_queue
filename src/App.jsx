@@ -845,12 +845,9 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
       border: `0.5px solid ${border}`, borderTop: `3px solid ${accent}`,
       display: 'flex', flexDirection: 'column', minHeight: 0,
     }}>
-      {/* Nom + statut */}
+      {/* Nom */}
       <div style={{ padding: '10px 14px 8px', borderBottom: `0.5px solid ${border}`, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: '0.01em' }}>{printer.name}</span>
-          <StatePill state={effectiveState} />
-        </div>
+        <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: '0.01em' }}>{printer.name}</span>
         <div style={{ fontSize: 10.5, color: sub, marginTop: 1 }}>{printer.model}</div>
       </div>
 
