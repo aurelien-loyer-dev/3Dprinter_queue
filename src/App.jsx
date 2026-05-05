@@ -1454,12 +1454,12 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
             const isCompact = finalHeight < 40;
             const nameFont  = isTiny ? 7.5 : isCompact ? 8.5 : 9;
             const timeFont  = isTiny ? 10 : isCompact ? 12 : 16;
-            // Créneau actuel → couleur filament ; suivants → blanc neutre
-            const blockColor   = isLive && activeFilamentColor ? activeFilamentColor : 'rgba(255,255,255,0.18)';
-            const borderColor  = isLive && activeFilamentColor ? activeFilamentColor : 'rgba(255,255,255,0.45)';
-            const bgColor      = isLive && activeFilamentColor
+            // Créneau actuel → couleur filament ; suivants → blanc lisible
+            const blockColor  = isLive && activeFilamentColor ? activeFilamentColor : 'rgba(255,255,255,0.75)';
+            const borderColor = isLive && activeFilamentColor ? activeFilamentColor : 'rgba(255,255,255,0.30)';
+            const bgColor     = isLive && activeFilamentColor
               ? `color-mix(in srgb, ${activeFilamentColor} 22%, transparent)`
-              : 'rgba(255,255,255,0.06)';
+              : 'rgba(255,255,255,0.05)';
             return (
               <div key={r.id} style={{
                 position: 'absolute',
@@ -1470,9 +1470,10 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
                 borderRadius: 5, overflow: 'hidden',
                 padding: isTiny ? '1px 5px' : '3px 7px', zIndex: 2,
                 display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                gap: isTiny ? 0 : 3,
               }}>
                 {!isTiny && (
-                  <div style={{ fontSize: nameFont, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff', lineHeight: 1.05 }}>
+                  <div style={{ fontSize: nameFont, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>
                     {r.firstName} {r.lastName}
                   </div>
                 )}
@@ -1481,7 +1482,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
                     ? `${fmtTimeRound(r.startMin)}–${fmtTimeRound(r.startMin + r.durationMin)}`
                     : `${fmtTime(r.startMin)}–${fmtTime(r.startMin + r.durationMin)}`}
                 </div>
-                {isLive && <div style={{ fontSize: 9, color: blockColor, fontWeight: 700, marginTop: 1 }}>● EN COURS</div>}
+                {isLive && <div style={{ fontSize: 9, color: blockColor, fontWeight: 700 }}>● EN COURS</div>}
               </div>
             );
           })}
