@@ -307,12 +307,6 @@ export default function App() {
     return !maintenanceMap[p.id] && ['printing', 'paused'].includes(printerStatus[p.id].state) && (tel?.state === 'printing' || tel?.state === 'paused');
   });
 
-  React.useEffect(() => {
-    if (cameraFocusId && !activeCameraPrinters.some(p => p.id === cameraFocusId)) {
-      setCameraFocusId(null);
-    }
-  }, [cameraFocusId, activeCameraPrinters]);
-
   const myUpcomingCount = reservations.filter(r => r.login === me.login && r.startMin + r.durationMin > 0).length;
   const todayCount = reservations.filter(r => r.startMin + r.durationMin > 0 && r.startMin < 24 * 60).length;
   const printingCount = PRINTERS.filter(p => ['printing', 'soon_available'].includes(printerStatus[p.id].state)).length;
