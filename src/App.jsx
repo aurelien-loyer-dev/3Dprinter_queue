@@ -48,7 +48,7 @@ import {
   PRINTERS, NOW_FIXED,
   computePrinterStatus,
   printerById, printerColor,
-  fmtTime, fmtDuration, fmtRelativeFuture,
+  fmtTime, fmtTimeRound, fmtDuration, fmtRelativeFuture,
 } from './data.js';
 import {
   getSessionUser, onAuthChange, logoutUser,
@@ -1363,6 +1363,10 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
             const minHeight = 20; // px — ensure visible on TV browsers
             const finalHeight = Math.max(heightPx, minHeight);
             const isLive    = r.startMin <= elapsedMin;
+              const isTiny = finalHeight < 28;
+              const isCompact = finalHeight < 40;
+              const nameFont = isTiny ? 7.5 : isCompact ? 8.5 : 9;
+              const timeFont = isTiny ? 10 : isCompact ? 12 : 16;
             return (
               <div key={r.id} style={{
                 position: 'absolute',
@@ -1371,14 +1375,19 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
                 background: isLive ? ph(printer.hue, 40, 58) : ph(printer.hue, 28, 44),
                 borderLeft: `3px solid ${ph(printer.hue, 60, 72)}`,
                 borderRadius: 5, overflow: 'hidden',
-                padding: '3px 7px', zIndex: 2,
+                  padding: isTiny ? '1px 5px' : '3px 7px', zIndex: 2,
+                  display: 'flex', flexDirection: 'column', justifyContent: 'center',
               }}>
-                <div style={{ fontSize: 9, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff', lineHeight: 1.2 }}>
-                  {r.firstName} {r.lastName}
-                </div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
-                  {fmtTime(r.startMin)}–{fmtTime(r.startMin + r.durationMin)}
-                </div>
+                  {!isTiny && (
+                    <div style={{ fontSize: nameFont, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff', lineHeight: 1.05 }}>
+                      {r.firstName} {r.lastName}
+                    </div>
+                  )}
+                  <div style={{ fontSize: timeFont, fontWeight: 800, color: '#fff', fontVariantNumeric: 'tabular-nums', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                    {isTiny
+                      ? `${fmtTimeRound(r.startMin)}–${fmtTimeRound(r.startMin + r.durationMin)}`
+                      : `${fmtTime(r.startMin)}–${fmtTime(r.startMin + r.durationMin)}`}
+                  </div>
                 {isLive && <div style={{ fontSize: 9, color: ph(printer.hue, 78, 80), fontWeight: 700, marginTop: 1 }}>● EN COURS</div>}
               </div>
             );
