@@ -78,9 +78,12 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 }/*EDITMODE-END*/;
 
 const isKiosk = new URLSearchParams(window.location.search).get('kiosk') === '1';
+const CAMERA_PATH = '/camera';
+const HOME_PATH = '/';
 
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [pathname, setPathname] = React.useState(window.location.pathname || HOME_PATH);
   const [me, setMe] = React.useState(null);
   const [authLoading, setAuthLoading] = React.useState(true);
   const [authScreen, setAuthScreen] = React.useState('login');
@@ -101,7 +104,32 @@ export default function App() {
   const [cameraTelemetryMap, setCameraTelemetryMap] = React.useState({});
   const [cameraFocusId, setCameraFocusId] = React.useState(null);
 
+  const activeView = !isKiosk && pathname === CAMERA_PATH ? 'camera' : t.view;
   const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
+
+  React.useEffect(() => {
+    const onPopState = () => setPathname(window.location.pathname || HOME_PATH);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigateTo = React.useCallback((path, nextView = null) => {
+    if (nextView !== null && t.view !== nextView) {
+      setTweak('view', nextView);
+    }
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+      setPathname(path);
+    }
+  }, [setTweak, t.view]);
+
+  const setAppView = React.useCallback((view) => {
+    if (view === 'camera') {
+      navigateTo(CAMERA_PATH, 'camera');
+      return;
+    }
+    navigateTo(HOME_PATH, view);
+  }, [navigateTo]);
 
   // If a printer is actively printing without an active reservation, inject a
   // synthetic timeline slot so users can see real occupancy on the planning.
@@ -191,7 +219,7 @@ export default function App() {
   }, []);
 
   React.useEffect(() => {
-    if (t.view !== 'camera') {
+    if (activeView !== 'camera') {
       setCameraTelemetryMap({});
       return;
     }
@@ -199,7 +227,7 @@ export default function App() {
     refresh();
     const channel = subscribeToPrinterTelemetry(refresh);
     return () => channel.unsubscribe();
-  }, [t.view]);
+  }, [activeView]);
 
   // Progress bars : re-render 30s. Kiosque : vrai rechargement depuis la DB toutes les 15s
   React.useEffect(() => {
@@ -437,7 +465,7 @@ export default function App() {
   const availableCount = PRINTERS.filter(p => ['available', 'soon_unavailable'].includes(printerStatus[p.id].state)).length;
 
   return (
-    <div data-screen-label="Dashboard" style={{
+    <div data-screen-label={activeView === 'camera' ? 'Camera' : 'Dashboard'} style={{
       minHeight: '100vh', background: bg, color: fg,
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif',
       letterSpacing: '-0.005em',
@@ -521,10 +549,10 @@ export default function App() {
         <Btn
           variant="secondary"
           size="sm"
-          icon={t.view === 'camera' ? 'list' : 'grid'}
-          onClick={() => setTweak('view', t.view === 'camera' ? 'dashboard' : 'camera')}
+          icon={activeView === 'camera' ? 'list' : 'grid'}
+          onClick={() => setAppView(activeView === 'camera' ? 'dashboard' : 'camera')}
         >
-          {t.view === 'camera' ? 'Planning' : 'Caméras'}
+          {activeView === 'camera' ? 'Planning' : 'Caméras'}
         </Btn>
 
         {me.isAdmin && (
@@ -563,10 +591,12 @@ export default function App() {
         <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}>
-              Files d'attente
+              {activeView === 'camera' ? 'Caméras' : 'Files d\'attente'}
             </h1>
             <div style={{ fontSize: 13, color: sub, marginTop: 4 }}>
-              5 imprimantes · cliquez sur un créneau libre pour réserver, ou sur l'en-tête d'une imprimante pour voir le détail
+              {activeView === 'camera'
+                ? 'Diffusion en direct des imprimantes en cours d\'impression'
+                : '5 imprimantes · cliquez sur un créneau libre pour réserver, ou sur l\'en-tête d\'une imprimante pour voir le détail'}
             </div>
           </div>
           <div style={{ fontSize: 11.5, color: sub, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -577,7 +607,7 @@ export default function App() {
           </div>
         </div>
 
-        {t.view === 'dashboard' ? (
+        {activeView === 'dashboard' ? (
           <DashboardView
             t={t}
             printerStatus={printerStatus}
@@ -591,7 +621,7 @@ export default function App() {
             onCancel={handleCancel}
             searchQuery={searchQuery}
           />
-        ) : t.view === 'camera' ? (
+        ) : activeView === 'camera' ? (
           <CameraView
             printers={activeCameraPrinters}
             telemetryMap={cameraTelemetryMap}
@@ -626,7 +656,7 @@ export default function App() {
         <TweakSection label="Vue" />
         <TweakRadio label="Affichage" value={t.view}
           options={['dashboard', 'list', 'camera']}
-          onChange={(v) => setTweak('view', v)} />
+          onChange={(v) => setAppView(v)} />
         <TweakSlider label="Heures visibles" value={t.hourSpan} min={6} max={48} step={6} unit="h"
           onChange={(v) => setTweak('hourSpan', v)} />
 
