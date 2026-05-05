@@ -836,13 +836,6 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
     : isAvailable || isSoon           ? 'hsl(145, 52%, 46%)'
     : ph(printer.hue);
 
-  const remainingLabel = (() => {
-    const minutes = isPrinting ? status.etaMin : status.nextStartMin ?? 0;
-    if (minutes == null) return '--';
-    const label = fmtRelativeFuture(minutes);
-    return label === 'maintenant' ? '0min' : label;
-  })();
-
   const border = 'rgba(255,255,255,0.06)';
   const sub    = 'rgba(255,255,255,0.4)';
 
@@ -927,9 +920,6 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.05 }}>
                 {isPrinting ? 'En impression' : 'Impression'}
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: sub, fontVariantNumeric: 'tabular-nums', marginTop: 3 }}>
-                {remainingLabel}
               </div>
               {currentJob && (
                 <div style={{ fontWeight: 700, fontSize: 12, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
