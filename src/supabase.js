@@ -7,6 +7,13 @@ export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
+function maybeLogDbError(label, error) {
+  if (!error) return;
+  const msg = (error && error.message) ? error.message : String(error);
+  if (msg.includes('Could not find the table')) return; // supabase schema cache missing table — ignore
+  console.error(`${label}:`, msg);
+}
+
 const ADMIN_LOGIN = 'aurelien.loyer@epitech.eu';
 
 // ── Auth helpers ───────────────────────────────────────────────────────────
@@ -153,7 +160,7 @@ export async function loadReservations() {
     .from('qp_reservations')
     .select('*')
     .order('start_at');
-  if (error) { console.error('loadReservations:', error.message); return []; }
+  if (error) { maybeLogDbError('loadReservations', error); return []; }
   return (data || []).map(dbToReservation);
 }
 
@@ -165,13 +172,13 @@ export async function addReservation(r) {
     login: r.login, first_name: r.firstName, last_name: r.lastName,
     start_at: startAt, end_at: endAt, project: r.project,
   });
-  if (error) console.error('addReservation:', error.message);
+  if (error) maybeLogDbError('addReservation', error);
   return !error;
 }
 
 export async function deleteReservation(id) {
   const { error } = await supabase.from('qp_reservations').delete().eq('id', id);
-  if (error) console.error('deleteReservation:', error.message);
+  if (error) maybeLogDbError('deleteReservation', error);
   return !error;
 }
 
@@ -187,7 +194,7 @@ export function subscribeToReservations(onRefresh, onStatus) {
 export async function loadFilamentColors() {
   const { data, error } = await supabase
     .from('qp_filament_colors').select('*').order('printer_id');
-  if (error) { console.error('loadFilamentColors:', error.message); return []; }
+  if (error) { maybeLogDbError('loadFilamentColors', error); return []; }
   return data || [];
 }
 
@@ -195,13 +202,13 @@ export async function addFilamentColor(printerId, colorName, hexColor) {
   const id = `color-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const { error } = await supabase.from('qp_filament_colors')
     .insert({ id, printer_id: printerId, color_name: colorName, hex_color: hexColor });
-  if (error) { console.error('addFilamentColor:', error.message); return false; }
+  if (error) { maybeLogDbError('addFilamentColor', error); return false; }
   return true;
 }
 
 export async function deleteFilamentColor(id) {
   const { error } = await supabase.from('qp_filament_colors').delete().eq('id', id);
-  if (error) { console.error('deleteFilamentColor:', error.message); return false; }
+  if (error) { maybeLogDbError('deleteFilamentColor', error); return false; }
   return true;
 }
 
@@ -224,7 +231,7 @@ export async function loadPrinterNotes(printerId) {
     .eq('printer_id', printerId)
     .order('created_at', { ascending: false })
     .limit(5);
-  if (error) { console.error('loadPrinterNotes:', error.message); return []; }
+  if (error) { maybeLogDbError('loadPrinterNotes', error); return []; }
   return data || [];
 }
 
@@ -235,13 +242,13 @@ export async function addPrinterNote(printerId, content, me) {
     author_login: me.login,
     author_name: `${me.firstName} ${me.lastName}`,
   });
-  if (error) { console.error('addPrinterNote:', error.message); return false; }
+  if (error) { maybeLogDbError('addPrinterNote', error); return false; }
   return true;
 }
 
 export async function deletePrinterNote(id) {
   const { error } = await supabase.from('qp_printer_notes').delete().eq('id', id);
-  if (error) { console.error('deletePrinterNote:', error.message); return false; }
+  if (error) { maybeLogDbError('deletePrinterNote', error); return false; }
   return true;
 }
 
@@ -249,7 +256,7 @@ export async function deletePrinterNote(id) {
 
 export async function loadMaintenance() {
   const { data, error } = await supabase.from('qp_maintenance').select('*');
-  if (error) { console.error('loadMaintenance:', error.message); return []; }
+  if (error) { maybeLogDbError('loadMaintenance', error); return []; }
   return data || [];
 }
 
@@ -260,13 +267,13 @@ export async function setMaintenance(printerId, message, returnAt, me) {
     return_at: returnAt || null,
     set_by: me.login,
   }, { onConflict: 'printer_id' });
-  if (error) { console.error('setMaintenance:', error.message); return false; }
+  if (error) { maybeLogDbError('setMaintenance', error); return false; }
   return true;
 }
 
 export async function clearMaintenance(printerId) {
   const { error } = await supabase.from('qp_maintenance').delete().eq('printer_id', printerId);
-  if (error) { console.error('clearMaintenance:', error.message); return false; }
+  if (error) { maybeLogDbError('clearMaintenance', error); return false; }
   return true;
 }
 
@@ -283,7 +290,7 @@ export async function loadPrinterTelemetry() {
   const { data, error } = await supabase
     .from('qp_printer_telemetry')
     .select('printer_id,state,progress,remaining_min,current_file,layer_current,layer_total,nozzle_temp,bed_temp,chamber_temp,speed_level,error_code,current_stage,ams_colors,updated_at');
-  if (error) { console.error('loadPrinterTelemetry:', error.message); return {}; }
+  if (error) { maybeLogDbError('loadPrinterTelemetry', error); return {}; }
   return Object.fromEntries((data || []).map(r => [r.printer_id, r]));
 }
 
@@ -291,13 +298,52 @@ export async function loadPrinterCameraTelemetry() {
   const { data, error } = await supabase
     .from('qp_printer_telemetry')
     .select('printer_id,state,camera_jpeg,updated_at');
-  if (error) { console.error('loadPrinterCameraTelemetry:', error.message); return {}; }
+  if (error) { maybeLogDbError('loadPrinterCameraTelemetry', error); return {}; }
   return Object.fromEntries((data || []).map(r => [r.printer_id, r]));
 }
 
 export function subscribeToPrinterTelemetry(onRefresh) {
-  return supabase
-    .channel('qp-telemetry-live')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'qp_printer_telemetry' }, onRefresh)
-    .subscribe();
+  // Shared channel + callback registry to avoid calling `.on` on an already-subscribed
+  // channel (Supabase realtime client forbids adding postgres_changes callbacks
+  // after subscribe()). We create a single channel and forward events to
+  // all registered listeners.
+  if (!globalThis.__qpTelemetry) {
+    globalThis.__qpTelemetry = { callbacks: new Set(), channel: null };
+  }
+
+  const registry = globalThis.__qpTelemetry;
+
+  // ensure channel exists
+  if (!registry.channel) {
+    const name = `qp-telemetry-live-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    try {
+      registry.channel = supabase
+        .channel(name)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'qp_printer_telemetry' }, () => {
+          registry.callbacks.forEach(cb => {
+            try { cb(); } catch (e) { console.error('telemetry callback error:', e); }
+          });
+        })
+        .subscribe();
+    } catch (e) {
+      // In some dev/HMR scenarios the client returns an already-subscribed channel
+      // and calling `.on` will throw. Fall back to polling to keep UI functional.
+      console.warn('subscribeToPrinterTelemetry: realtime channel setup failed, falling back to polling —', e.message);
+      if (!registry.pollers) registry.pollers = new Map();
+      const id = setInterval(() => registry.callbacks.forEach(cb => { try { cb(); } catch {} }), 15_000);
+      registry.pollers.set(name, id);
+    }
+  }
+
+  registry.callbacks.add(onRefresh);
+
+  return {
+    unsubscribe: () => {
+      registry.callbacks.delete(onRefresh);
+      if (registry.callbacks.size === 0 && registry.channel) {
+        try { registry.channel.unsubscribe(); } catch {};
+        registry.channel = null;
+      }
+    }
+  };
 }
