@@ -930,7 +930,7 @@ function CameraView({ printers, telemetryMap, printerStatus, selectedPrinterId, 
       <div data-screen-label="Camera" style={{ minHeight: '100%', background: bg, padding: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
-            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Caméras</div>
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Mosaïque</div>
             <div style={{ fontSize: 12.5, color: sub, marginTop: 3 }}>{printers.length} caméra{printers.length > 1 ? 's' : ''} active{printers.length > 1 ? 's' : ''}</div>
           </div>
           {printers.length > 1 && (
