@@ -65,6 +65,9 @@ create table if not exists qp_printer_telemetry (
   updated_at    timestamptz default now()
 );
 
+alter table if exists qp_printer_telemetry
+  add column if not exists camera_jpeg text;
+
 -- Mise à jour auto du timestamp
 create or replace function qp_touch_telemetry()
 returns trigger language plpgsql as $$

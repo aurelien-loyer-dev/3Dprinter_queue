@@ -1,6 +1,5 @@
 // App.jsx — main shell
 import React from 'react';
-
 // Fusionne le statut basé sur les réservations avec la télémétrie réelle du bridge
 function mergePrinterStatus(resStatus, tel) {
   if (!tel) return resStatus;
@@ -87,6 +86,7 @@ export default function App() {
   const [filamentColors, setFilamentColors] = React.useState([]);
   const [wsStatus, setWsStatus] = React.useState('connecting');
   const [telemetryMap, setTelemetryMap] = React.useState({});
+  const [cameraFocusId, setCameraFocusId] = React.useState(null);
 
   // Session Supabase — persiste automatiquement entre les refreshs
   React.useEffect(() => {
@@ -290,6 +290,16 @@ export default function App() {
       telemetryMap[p.id]
     )])
   );
+  const activeCameraPrinters = PRINTERS.filter(p => {
+    const tel = telemetryMap[p.id];
+    return !maintenanceMap[p.id] && tel?.camera_jpeg && ['printing', 'paused'].includes(printerStatus[p.id].state);
+  });
+
+  React.useEffect(() => {
+    if (cameraFocusId && !activeCameraPrinters.some(p => p.id === cameraFocusId)) {
+      setCameraFocusId(null);
+    }
+  }, [cameraFocusId, activeCameraPrinters]);
 
   const myUpcomingCount = reservations.filter(r => r.login === me.login && r.startMin + r.durationMin > 0).length;
   const todayCount = reservations.filter(r => r.startMin + r.durationMin > 0 && r.startMin < 24 * 60).length;
@@ -442,6 +452,16 @@ export default function App() {
             onCancel={handleCancel}
             searchQuery={searchQuery}
           />
+        ) : t.view === 'camera' ? (
+          <CameraView
+            printers={activeCameraPrinters}
+            telemetryMap={telemetryMap}
+            printerStatus={printerStatus}
+            selectedPrinterId={cameraFocusId}
+            onSelectPrinter={setCameraFocusId}
+            onClearSelection={() => setCameraFocusId(null)}
+            dark={t.dark}
+          />
         ) : (
           <ListView
             t={t}
@@ -466,7 +486,7 @@ export default function App() {
 
         <TweakSection label="Vue" />
         <TweakRadio label="Affichage" value={t.view}
-          options={['dashboard', 'list']}
+          options={['dashboard', 'list', 'camera']}
           onChange={(v) => setTweak('view', v)} />
         <TweakSlider label="Heures visibles" value={t.hourSpan} min={6} max={48} step={6} unit="h"
           onChange={(v) => setTweak('hourSpan', v)} />
@@ -632,6 +652,142 @@ function ListView({ t, printerStatus, reservations, me, onPrinterClick, onReserv
           searchQuery={searchQuery}
         />
       ))}
+    </div>
+  );
+}
+
+function CameraView({ printers, telemetryMap, printerStatus, selectedPrinterId, onSelectPrinter, onClearSelection, dark }) {
+  const bg = dark ? '#0a0a0a' : '#f4f4f5';
+  const fg = dark ? '#f5f5f7' : '#1d1d1f';
+  const sub = dark ? 'rgba(255,255,255,0.55)' : 'rgba(29,29,31,0.55)';
+  const border = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+
+  const selected = printers.find(p => p.id === selectedPrinterId) || (printers.length === 1 ? printers[0] : null);
+  const activeTelem = selected ? telemetryMap[selected.id] : null;
+
+  if (printers.length === 0) {
+    return (
+      <div data-screen-label="Camera" style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bg, color: fg, padding: 24 }}>
+        <div style={{ maxWidth: 520, width: '100%', textAlign: 'center', border: `0.5px solid ${border}`, borderRadius: 20, padding: 28, background: dark ? '#111' : '#fff' }}>
+          <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Aucune caméra active</div>
+          <div style={{ fontSize: 13, color: sub, lineHeight: 1.5 }}>
+            Aucune imprimante n’envoie de snapshot caméra pour le moment. Dès qu’une impression démarre, les caméras actives apparaissent ici.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const FeedCard = ({ printer, fullscreen = false }) => {
+    const tel = telemetryMap[printer.id];
+    const src = tel?.camera_jpeg ? `data:image/jpeg;base64,${tel.camera_jpeg}` : '';
+    return (
+      <div
+        onClick={() => printers.length > 1 && !fullscreen && onSelectPrinter(printer.id)}
+        style={{
+          width: '100%',
+          border: `0.5px solid ${border}`,
+          borderRadius: fullscreen ? 24 : 18,
+          overflow: 'hidden',
+          background: dark ? '#121212' : '#fff',
+          color: fg,
+          padding: 0,
+          cursor: printers.length > 1 && !fullscreen ? 'pointer' : 'default',
+          boxShadow: fullscreen ? '0 24px 80px rgba(0,0,0,0.3)' : 'none',
+          position: 'relative',
+          textAlign: 'left',
+        }}
+      >
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.0), rgba(0,0,0,0.55))', pointerEvents: 'none', zIndex: 1 }} />
+        {src ? (
+          <img
+            src={src}
+            alt={`Caméra ${printer.name}`}
+            style={{ width: '100%', height: fullscreen ? 'min(72vh, 920px)' : '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <div style={{ aspectRatio: fullscreen ? '16 / 9' : '4 / 3', display: 'flex', alignItems: 'center', justifyContent: 'center', color: sub, padding: 24 }}>
+            Image indisponible
+          </div>
+        )}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 2, padding: fullscreen ? '18px 20px' : '14px 16px', display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: fullscreen ? 26 : 16, fontWeight: 800, letterSpacing: '-0.01em' }}>{printer.name}</div>
+            <div style={{ fontSize: fullscreen ? 13 : 11.5, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>
+              {printerStatus[printer.id]?.state === 'paused' ? 'En pause' : 'En impression'}
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'end', gap: 6 }}>
+            <StatePill state={printerStatus[printer.id]?.state || 'available'} compact />
+            {fullscreen && printers.length > 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onClearSelection(); }}
+                style={{
+                  border: `0.5px solid ${border}`,
+                  borderRadius: 999,
+                  background: 'rgba(255,255,255,0.14)',
+                  color: '#fff',
+                  padding: '6px 10px',
+                  fontSize: 11,
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(10px)',
+                }}
+              >
+                Retour à la mosaïque
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (selected || printers.length === 1) {
+    return (
+      <div data-screen-label="Camera" style={{ minHeight: '100%', background: bg, padding: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Caméras</div>
+            <div style={{ fontSize: 12.5, color: sub, marginTop: 3 }}>{printers.length} caméra{printers.length > 1 ? 's' : ''} active{printers.length > 1 ? 's' : ''}</div>
+          </div>
+          {printers.length > 1 && (
+            <button
+              onClick={onClearSelection}
+              style={{
+                border: `0.5px solid ${border}`,
+                borderRadius: 999,
+                background: dark ? '#111' : '#fff',
+                color: fg,
+                padding: '8px 12px',
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              Voir la mosaïque
+            </button>
+          )}
+        </div>
+        <FeedCard printer={selected || printers[0]} fullscreen />
+        {activeTelem?.updated_at && (
+          <div style={{ marginTop: 10, fontSize: 11.5, color: sub }}>
+            Snapshot mis à jour {new Date(activeTelem.updated_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div data-screen-label="Camera" style={{ minHeight: '100%', background: bg, color: fg, padding: 18 }}>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Caméras</div>
+        <div style={{ fontSize: 12.5, color: sub, marginTop: 3 }}>{printers.length} caméras actives</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(3, printers.length)}, minmax(0, 1fr))`, gap: 14 }}>
+        {printers.map(printer => (
+          <FeedCard key={printer.id} printer={printer} />
+        ))}
+      </div>
     </div>
   );
 }
