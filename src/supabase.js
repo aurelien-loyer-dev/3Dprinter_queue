@@ -77,6 +77,16 @@ async function callOtp(action, body) {
   }
 }
 
+// ── Commandes imprimante ───────────────────────────────────────────────────────
+
+export async function sendPrinterCommand(printerId, command) {
+  const { error } = await supabase
+    .from('qp_printer_commands')
+    .insert({ printer_id: printerId, command });
+  if (error) { maybeLogDbError('sendPrinterCommand', error); return false; }
+  return true;
+}
+
 // ── Register — envoie juste le code, le compte est créé après vérification ──
 
 export async function registerUser(login, password) {

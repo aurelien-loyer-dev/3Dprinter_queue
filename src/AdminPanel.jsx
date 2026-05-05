@@ -6,11 +6,11 @@ import {
 } from './data.js';
 import {
   loadFilamentColors, addFilamentColor, deleteFilamentColor, deleteReservationAdmin,
-  setMaintenance, clearMaintenance,
+  setMaintenance, clearMaintenance, sendPrinterCommand,
 } from './supabase.js';
 import { Icon, Btn } from './ui.jsx';
 
-export function AdminPanel({ dark, reservations, onReservationDeleted, onDeleteAllReservations, me, maintenanceMap = {} }) {
+export function AdminPanel({ dark, reservations, onReservationDeleted, onDeleteAllReservations, me, maintenanceMap = {}, telemetryMap = {} }) {
   const [filamentColors, setFilamentColors] = React.useState([]);
   const [newColor, setNewColor] = React.useState({ printerId: PRINTERS[0].id, name: '', hex: '#FF0000' });
   const [loading, setLoading] = React.useState(false);
@@ -113,6 +113,25 @@ export function AdminPanel({ dark, reservations, onReservationDeleted, onDeleteA
       {/* Content */}
       <main style={{ padding: '24px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+
+          {/* Printer Control Section */}
+          <div style={{ gridColumn: '1/-1' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Contrôle des impressions</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+              {PRINTERS.map(printer => (
+                <PrinterControlCard
+                  key={printer.id}
+                  printer={printer}
+                  telemetry={telemetryMap[printer.id] || null}
+                  dark={dark}
+                  border={border}
+                  fg={fg}
+                  sub={sub}
+                  cardBg={cardBg}
+                />
+              ))}
+            </div>
+          </div>
 
           {/* Maintenance Section */}
           <div style={{ gridColumn: '1/-1' }}>
@@ -438,6 +457,77 @@ function MaintenanceCard({ printer, maintenance, me, dark, border, fg, sub, fiel
         <Btn variant="secondary" size="sm" full icon="wrench" onClick={() => setExpanded(true)}>
           Mettre en maintenance
         </Btn>
+      )}
+    </div>
+  );
+}
+
+function PrinterControlCard({ printer, telemetry, dark, border, fg, sub, cardBg }) {
+  const [busy, setBusy] = React.useState(false);
+  const [feedback, setFeedback] = React.useState(null);
+
+  const state = telemetry?.state || 'offline';
+  const isPrinting = state === 'printing';
+  const isPaused   = state === 'paused';
+  const isActive   = isPrinting || isPaused;
+
+  const stateColor = {
+    printing: 'oklch(0.5 0.18 145)',
+    paused:   'oklch(0.55 0.16 55)',
+    error:    'oklch(0.5 0.18 25)',
+  }[state] || sub;
+
+  const stateLabel = {
+    printing: 'En impression',
+    paused:   'En pause',
+    idle:     'Idle',
+    error:    'Erreur',
+    offline:  'Hors ligne',
+  }[state] || state;
+
+  const send = async (cmd) => {
+    setBusy(true);
+    setFeedback(null);
+    const ok = await sendPrinterCommand(printer.id, cmd);
+    setFeedback(ok ? 'Commande envoyée' : 'Erreur');
+    setBusy(false);
+    setTimeout(() => setFeedback(null), 3000);
+  };
+
+  return (
+    <div style={{ background: cardBg, border: `0.5px solid ${border}`, borderRadius: 14, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ width: 8, height: 8, borderRadius: 2, background: printerColor(printer.hue), flexShrink: 0 }} />
+        <span style={{ fontWeight: 600, fontSize: 13, color: fg }}>{printer.name}</span>
+      </div>
+      <div style={{ fontSize: 12, color: stateColor, fontWeight: 500 }}>
+        {stateLabel}{isPrinting && telemetry?.progress != null && ` — ${telemetry.progress}%`}
+      </div>
+      {isActive ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {isPrinting && (
+            <button disabled={busy} onClick={() => send('pause')} style={{ width: '100%', padding: '7px 0', borderRadius: 8, border: `0.5px solid ${border}`, background: dark ? 'rgba(255,200,50,0.12)' : 'oklch(0.97 0.06 80)', color: 'oklch(0.5 0.16 70)', fontWeight: 600, fontSize: 12, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1 }}>
+              ⏸ Mettre en pause
+            </button>
+          )}
+          {isPaused && (
+            <button disabled={busy} onClick={() => send('resume')} style={{ width: '100%', padding: '7px 0', borderRadius: 8, border: `0.5px solid ${border}`, background: dark ? 'rgba(50,200,100,0.12)' : 'oklch(0.97 0.06 145)', color: 'oklch(0.45 0.16 145)', fontWeight: 600, fontSize: 12, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1 }}>
+              ▶ Reprendre
+            </button>
+          )}
+          <button disabled={busy} onClick={() => { if (confirm(`Annuler l'impression sur ${printer.name} ?`)) send('stop'); }} style={{ width: '100%', padding: '7px 0', borderRadius: 8, border: `0.5px solid ${border}`, background: dark ? 'rgba(220,60,40,0.12)' : 'oklch(0.97 0.04 25)', color: 'oklch(0.5 0.18 25)', fontWeight: 600, fontSize: 12, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1 }}>
+            ✕ Annuler l'impression
+          </button>
+        </div>
+      ) : (
+        <div style={{ fontSize: 11.5, color: sub }}>
+          {state === 'offline' ? 'Imprimante non joignable' : 'Aucune impression en cours'}
+        </div>
+      )}
+      {feedback && (
+        <div style={{ fontSize: 11, color: feedback === 'Commande envoyée' ? 'oklch(0.5 0.16 145)' : 'oklch(0.5 0.18 25)' }}>
+          {feedback}
+        </div>
       )}
     </div>
   );
