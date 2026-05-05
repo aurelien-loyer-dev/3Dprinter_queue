@@ -923,7 +923,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.05 }}>
-                En impression
+                {isPrinting ? 'En impression' : 'Impression'}
               </div>
               <div style={{ fontSize: 16, fontWeight: 700, color: sub, fontVariantNumeric: 'tabular-nums', marginTop: 3 }}>
                 {remainingLabel}
