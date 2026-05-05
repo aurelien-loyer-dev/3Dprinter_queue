@@ -993,6 +993,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
   const effectiveState = maintenance ? 'maintenance' : status.state;
   const isPrinting  = effectiveState === 'printing' || effectiveState === 'soon_available';
   const isPaused    = effectiveState === 'paused';
+  const isReserved  = effectiveState === 'reserved';
   const isAvailable = effectiveState === 'available';
   const isSoon      = effectiveState === 'soon_unavailable';
   const isMaint     = effectiveState === 'maintenance';
@@ -1114,6 +1115,16 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
                     <span style={kioskChipStyle}>{telemetry.speed_level}</span>
                   )}
                 </div>
+              )}
+            </div>
+          </div>
+        ) : isReserved ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="clock" size={20} color="hsl(260, 62%, 56%)" stroke={1.8} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'hsl(260, 62%, 56%)' }}>Réservé</div>
+              {currentJob && (
+                <div style={{ fontWeight: 700, fontSize: 12, marginTop: 4 }}>{currentJob.firstName} {currentJob.lastName}</div>
               )}
             </div>
           </div>

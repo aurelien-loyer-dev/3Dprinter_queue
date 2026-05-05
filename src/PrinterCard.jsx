@@ -13,6 +13,7 @@ import {
   getNextSlotOffset,
   printerColor, printerColorSoft,
   fmtTime, fmtTimeRound, fmtDuration, fmtRelativeFuture,
+  NOW_FIXED,
 } from './data.js';
 import { loadFilamentColors, loadPrinterNotes, addPrinterNote, deletePrinterNote } from './supabase.js';
 import { Icon, Btn, StatePill } from './ui.jsx';
@@ -68,6 +69,8 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
 
   const load = loadPct(allReservations, printer.id);
   const nextStart = findNextAvailable(allReservations, printer.id, slotSize, slotSize, slotOffset, slotOffset);
+  const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
+  const currentJob = items.find(r => r.startMin <= elapsedMin && r.startMin + r.durationMin > elapsedMin);
 
   const cardBg = dark ? 'rgba(255,255,255,0.04)' : '#ffffff';
   const border = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
@@ -157,6 +160,22 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
         {!maintenance && status.state === 'offline' && (
           <div style={{ fontSize: 11.5, color: subText, display: 'flex', alignItems: 'center', gap: 5 }}>
             Hors ligne
+          </div>
+        )}
+        {!maintenance && status.state === 'reserved' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="clock" size={12} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'oklch(0.45 0.12 220)' }}>Réservé</div>
+              {currentJob && (
+                <div style={{ fontWeight: 700, fontSize: 12, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {currentJob.firstName} {currentJob.lastName}
+                </div>
+              )}
+              {currentJob && (
+                <div style={{ fontSize: 10, color: subText }}>{fmtTime(currentJob.startMin)}–{fmtTime(currentJob.startMin + currentJob.durationMin)}</div>
+              )}
+            </div>
           </div>
         )}
         {!maintenance && status.state === 'available' && (
