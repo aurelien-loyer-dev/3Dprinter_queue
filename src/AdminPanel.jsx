@@ -9,7 +9,7 @@ import {
 } from './supabase.js';
 import { Icon, Btn } from './ui.jsx';
 
-export function AdminPanel({ dark, reservations, onReservationDeleted, onDeleteAllReservations, me, maintenanceMap = {}, telemetryMap = {}, onMaintenanceChange }) {
+export function AdminPanel({ dark, reservations, onReservationDeleted, onDeleteAllReservations, me, maintenanceMap = {}, telemetryMap = {}, onMaintenanceChange, onPrinterCommand }) {
   const [loading, setLoading] = React.useState(false);
 
   const handleDeleteReservation = async (id) => {
@@ -95,6 +95,7 @@ export function AdminPanel({ dark, reservations, onReservationDeleted, onDeleteA
                   fg={fg}
                   sub={sub}
                   cardBg={cardBg}
+                  onCommand={onPrinterCommand}
                 />
               ))}
             </div>
@@ -309,7 +310,7 @@ function MaintenanceCard({ printer, maintenance, me, onRefresh, dark, border, fg
   );
 }
 
-function PrinterControlCard({ printer, telemetry, dark, border, fg, sub, cardBg }) {
+function PrinterControlCard({ printer, telemetry, dark, border, fg, sub, cardBg, onCommand }) {
   const [busy, setBusy] = React.useState(false);
   const [feedback, setFeedback] = React.useState(null);
 
@@ -336,6 +337,7 @@ function PrinterControlCard({ printer, telemetry, dark, border, fg, sub, cardBg 
     setBusy(true);
     setFeedback(null);
     const ok = await sendPrinterCommand(printer.id, cmd);
+    if (ok && onCommand) onCommand(printer.id, cmd);
     setFeedback(ok ? 'Commande envoyée' : 'Erreur');
     setBusy(false);
     setTimeout(() => setFeedback(null), 3000);

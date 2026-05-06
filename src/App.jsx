@@ -817,6 +817,21 @@ export default function App() {
               onMaintenanceChange={refreshMaintenance}
               onReservationDeleted={(id) => setReservations(prev => prev.filter(r => r.id !== id))}
               onDeleteAllReservations={handleDeleteAllReservations}
+              onPrinterCommand={(printerId, cmd) => {
+                setTelemetryMap(prev => {
+                  const cur = prev[printerId] || {};
+                  if (cmd === 'stop') {
+                    return { ...prev, [printerId]: {
+                      ...cur, state: 'idle',
+                      progress: null, remaining_min: null,
+                      current_file: null, layer_current: null, layer_total: null,
+                    }};
+                  }
+                  if (cmd === 'pause')  return { ...prev, [printerId]: { ...cur, state: 'paused' } };
+                  if (cmd === 'resume') return { ...prev, [printerId]: { ...cur, state: 'printing' } };
+                  return prev;
+                });
+              }}
             />
           </div>
         </div>
