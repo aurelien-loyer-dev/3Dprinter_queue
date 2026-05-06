@@ -72,6 +72,7 @@ import {
   loadMaintenance, subscribeToMaintenance,
   loadFilamentColors, subscribeToFilamentColors,
   loadPrinterTelemetry, loadPrinterCameraTelemetry, subscribeToPrinterTelemetry,
+  getCameraUrl,
 } from './supabase.js';
 import { Icon, Avatar, Btn, GlobalAnims, StatePill } from './ui.jsx';
 import {
@@ -933,7 +934,7 @@ function CameraView({ printers, telemetryMap, printerStatus, selectedPrinterId, 
 
   const FeedCard = ({ printer, fullscreen = false }) => {
     const tel = telemetryMap[printer.id];
-    const src = tel?.camera_jpeg ? `data:image/jpeg;base64,${tel.camera_jpeg}` : '';
+    const src = getCameraUrl(printer.id, tel?.camera_version) ?? '';
     return (
       <div
         onClick={() => printers.length > 1 && !fullscreen && onSelectPrinter(printer.id)}
