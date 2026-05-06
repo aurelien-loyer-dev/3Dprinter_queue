@@ -60,6 +60,122 @@ function swatchBorder(hex) {
   const brightness = (r * 299 + g * 587 + b * 114) / 1000;
   return brightness > 160 ? '2px solid rgba(0,0,0,0.35)' : '2px solid rgba(255,255,255,0.18)';
 }
+
+function BufferedCameraImage({ src, alt, fullscreen, sub, dark }) {
+  const [displaySrc, setDisplaySrc] = React.useState(src || '');
+  const lastLoadedSrc = React.useRef(src || '');
+
+  React.useEffect(() => {
+    if (!src) {
+      lastLoadedSrc.current = '';
+      setDisplaySrc('');
+      return;
+    }
+
+    if (src === lastLoadedSrc.current) return;
+
+    const image = new window.Image();
+    let cancelled = false;
+
+    image.decoding = 'async';
+    image.onload = () => {
+      if (cancelled) return;
+      lastLoadedSrc.current = src;
+      setDisplaySrc(src);
+    };
+    image.onerror = () => {
+      if (cancelled) return;
+      if (!displaySrc) setDisplaySrc('');
+    };
+    image.src = src;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [src, displaySrc]);
+
+  const minHeight = fullscreen ? 'min(72vh, 920px)' : 240;
+  const aspectRatio = fullscreen ? '16 / 9' : '4 / 3';
+
+  return (
+    <div style={{ position: 'relative', width: '100%', minHeight, aspectRatio, background: dark ? '#050505' : '#111' }}>
+      {displaySrc ? (
+        <img
+          src={displaySrc}
+          alt={alt}
+          decoding="async"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+            background: dark ? '#050505' : '#111',
+          }}
+        />
+      ) : (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: sub, padding: 24 }}>
+          Image indisponible
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CameraFeedCard({ printer, telemetry, printerStatus, fullscreen = false, dark, border, fg, sub, onSelectPrinter, onClearSelection, canSelect = false, multiplePrinters = false }) {
+  const src = getCameraUrl(printer.id, telemetry?.camera_version) ?? '';
+
+  return (
+    <div
+      onClick={() => canSelect && !fullscreen && onSelectPrinter(printer.id)}
+      style={{
+        width: '100%',
+        border: `0.5px solid ${border}`,
+        borderRadius: fullscreen ? 24 : 18,
+        overflow: 'hidden',
+        background: dark ? '#121212' : '#fff',
+        color: fg,
+        padding: 0,
+        cursor: canSelect && !fullscreen ? 'pointer' : 'default',
+        boxShadow: fullscreen ? '0 24px 80px rgba(0,0,0,0.3)' : 'none',
+        position: 'relative',
+        textAlign: 'left',
+      }}
+    >
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.0), rgba(0,0,0,0.55))', pointerEvents: 'none', zIndex: 1 }} />
+      <BufferedCameraImage src={src} alt={`Caméra ${printer.name}`} fullscreen={fullscreen} sub={sub} dark={dark} />
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 2, padding: fullscreen ? '18px 20px' : '14px 16px', display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <div style={{ fontSize: fullscreen ? 26 : 16, fontWeight: 800, letterSpacing: '-0.01em' }}>{printer.name}</div>
+          <div style={{ fontSize: fullscreen ? 13 : 11.5, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>
+            {printerStatus[printer.id]?.state === 'paused' ? 'En pause' : 'En impression'}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'end', gap: 6 }}>
+          <StatePill state={printerStatus[printer.id]?.state || 'available'} compact />
+          {fullscreen && multiplePrinters && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onClearSelection(); }}
+              style={{
+                border: `0.5px solid ${border}`,
+                borderRadius: 999,
+                background: 'rgba(255,255,255,0.14)',
+                color: '#fff',
+                padding: '6px 10px',
+                fontSize: 11,
+                cursor: 'pointer',
+                backdropFilter: 'blur(10px)',
+              }}
+            >
+              Retour à la mosaïque
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 import {
   PRINTERS, NOW_FIXED,
   computePrinterStatus,
@@ -933,6 +1049,7 @@ function CameraView({ printers, telemetryMap, printerStatus, selectedPrinterId, 
 
   const selected = printers.find(p => p.id === selectedPrinterId) || (printers.length === 1 ? printers[0] : null);
   const activeTelem = selected ? telemetryMap[selected.id] : null;
+  const multiplePrinters = printers.length > 1;
 
   if (printers.length === 0) {
     return (
@@ -947,79 +1064,16 @@ function CameraView({ printers, telemetryMap, printerStatus, selectedPrinterId, 
     );
   }
 
-  const FeedCard = ({ printer, fullscreen = false }) => {
-    const tel = telemetryMap[printer.id];
-    const src = getCameraUrl(printer.id, tel?.camera_version) ?? '';
-    return (
-      <div
-        onClick={() => printers.length > 1 && !fullscreen && onSelectPrinter(printer.id)}
-        style={{
-          width: '100%',
-          border: `0.5px solid ${border}`,
-          borderRadius: fullscreen ? 24 : 18,
-          overflow: 'hidden',
-          background: dark ? '#121212' : '#fff',
-          color: fg,
-          padding: 0,
-          cursor: printers.length > 1 && !fullscreen ? 'pointer' : 'default',
-          boxShadow: fullscreen ? '0 24px 80px rgba(0,0,0,0.3)' : 'none',
-          position: 'relative',
-          textAlign: 'left',
-        }}
-      >
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.0), rgba(0,0,0,0.55))', pointerEvents: 'none', zIndex: 1 }} />
-        {src ? (
-          <img
-            src={src}
-            alt={`Caméra ${printer.name}`}
-            style={{ width: '100%', height: fullscreen ? 'min(72vh, 920px)' : '100%', objectFit: 'cover', display: 'block' }}
-          />
-        ) : (
-          <div style={{ aspectRatio: fullscreen ? '16 / 9' : '4 / 3', display: 'flex', alignItems: 'center', justifyContent: 'center', color: sub, padding: 24 }}>
-            Image indisponible
-          </div>
-        )}
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 2, padding: fullscreen ? '18px 20px' : '14px 16px', display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: 12 }}>
-          <div>
-            <div style={{ fontSize: fullscreen ? 26 : 16, fontWeight: 800, letterSpacing: '-0.01em' }}>{printer.name}</div>
-            <div style={{ fontSize: fullscreen ? 13 : 11.5, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>
-              {printerStatus[printer.id]?.state === 'paused' ? 'En pause' : 'En impression'}
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'end', gap: 6 }}>
-            <StatePill state={printerStatus[printer.id]?.state || 'available'} compact />
-            {fullscreen && printers.length > 1 && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onClearSelection(); }}
-                style={{
-                  border: `0.5px solid ${border}`,
-                  borderRadius: 999,
-                  background: 'rgba(255,255,255,0.14)',
-                  color: '#fff',
-                  padding: '6px 10px',
-                  fontSize: 11,
-                  cursor: 'pointer',
-                  backdropFilter: 'blur(10px)',
-                }}
-              >
-                Retour à la mosaïque
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   if (selected || printers.length === 1) {
+    const printer = selected || printers[0];
     return (
       <div data-screen-label="Camera" style={{ minHeight: '100%', background: bg, padding: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
             <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Mosaïque</div>
-            <div style={{ fontSize: 12.5, color: sub, marginTop: 3 }}>{printers.length} caméra{printers.length > 1 ? 's' : ''} active{printers.length > 1 ? 's' : ''}</div>
+            <div style={{ fontSize: 12.5, color: sub, marginTop: 3 }}>{printers.length} caméra{multiplePrinters ? 's' : ''} active{multiplePrinters ? 's' : ''}</div>
           </div>
-          {printers.length > 1 && (
+          {multiplePrinters && (
             <button
               onClick={onClearSelection}
               style={{
@@ -1036,7 +1090,18 @@ function CameraView({ printers, telemetryMap, printerStatus, selectedPrinterId, 
             </button>
           )}
         </div>
-        <FeedCard printer={selected || printers[0]} fullscreen />
+        <CameraFeedCard
+          printer={printer}
+          telemetry={telemetryMap[printer.id] || null}
+          printerStatus={printerStatus}
+          fullscreen
+          dark={dark}
+          border={border}
+          fg={fg}
+          sub={sub}
+          onClearSelection={onClearSelection}
+          multiplePrinters={multiplePrinters}
+        />
         {activeTelem?.updated_at && (
           <div style={{ marginTop: 10, fontSize: 11.5, color: sub }}>
             Snapshot mis à jour {new Date(activeTelem.updated_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -1054,7 +1119,19 @@ function CameraView({ printers, telemetryMap, printerStatus, selectedPrinterId, 
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(3, printers.length)}, minmax(0, 1fr))`, gap: 14 }}>
         {printers.map(printer => (
-          <FeedCard key={printer.id} printer={printer} />
+          <CameraFeedCard
+            key={printer.id}
+            printer={printer}
+            telemetry={telemetryMap[printer.id] || null}
+            printerStatus={printerStatus}
+            dark={dark}
+            border={border}
+            fg={fg}
+            sub={sub}
+            onSelectPrinter={onSelectPrinter}
+            canSelect={multiplePrinters}
+            multiplePrinters={multiplePrinters}
+          />
         ))}
       </div>
     </div>
