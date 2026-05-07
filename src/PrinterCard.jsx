@@ -247,7 +247,7 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
             {telemetry.speed_level && (status.state === 'printing' || status.state === 'paused') && (
               <TelChip dark={dark}>{telemetry.speed_level}</TelChip>
             )}
-            {telemetry.error_code != null && (
+            {telemetry.error_code != null && status.state === 'error' && (
               <TelChip dark={dark} error>Code {telemetry.error_code}</TelChip>
             )}
           </div>
