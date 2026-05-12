@@ -57,7 +57,7 @@ export function AdminPanel({ dark, reservations, onReservationDeleted, onDeleteA
           </div>
           <div>
             <div style={{ fontWeight: 600, fontSize: 14 }}>Admin Panel</div>
-            <div style={{ fontSize: 10.5, color: sub }}>Gestion imprimantes & filaments</div>
+            <div style={{ fontSize: 10.5, color: sub }}>Gestion imprimantes</div>
           </div>
         </div>
         <div style={{ flex: 1 }} />

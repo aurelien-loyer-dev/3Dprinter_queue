@@ -46,7 +46,7 @@ import {
   fmtTime, fmtTimeRound, fmtDuration, fmtRelativeFuture,
   NOW_FIXED,
 } from './data.js';
-import { loadFilamentColors, loadPrinterNotes, addPrinterNote, deletePrinterNote } from './supabase.js';
+import { loadPrinterNotes, addPrinterNote, deletePrinterNote } from './supabase.js';
 import { Icon, Btn, StatePill } from './ui.jsx';
 
 export function PrinterCard({ printer, status, reservations, allReservations, me, onSlotClick, onReserve, onCancel, slotSize, density, dark, searchQuery, hourSpan = 24, maintenance = null, telemetry = null }) {
@@ -55,26 +55,24 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
   const TIMELINE_HEIGHT = HOURS * PIXELS_PER_HOUR;
   const slotOffset = getNextSlotOffset(slotSize);
 
-  const [dbFilamentColors, setDbFilamentColors] = React.useState([]);
   const [notes, setNotes] = React.useState([]);
   const [noteInput, setNoteInput] = React.useState('');
   const [showNoteInput, setShowNoteInput] = React.useState(false);
   const [noteLoading, setNoteLoading] = React.useState(false);
 
   React.useEffect(() => {
-    loadFilamentColors().then(colors => setDbFilamentColors(colors.filter(c => c.printer_id === printer.id)));
     loadPrinterNotes(printer.id).then(setNotes);
   }, [printer.id]);
 
-  // Couleurs AMS du bridge prioritaires sur les couleurs manuelles
   const filamentColors = React.useMemo(() => {
-    if (telemetry?.ams_colors) {
-      try {
-        return JSON.parse(telemetry.ams_colors).map((hex, i) => ({ id: `ams-${i}`, hex_color: hex, color_name: `AMS ${i + 1}` }));
-      } catch { /* fall through */ }
-    }
-    return dbFilamentColors;
-  }, [telemetry?.ams_colors, dbFilamentColors]);
+    if (!telemetry?.ams_colors) return [];
+    try {
+      const parsed = JSON.parse(telemetry.ams_colors);
+      const colors = Array.isArray(parsed) ? parsed : parsed?.colors;
+      if (!Array.isArray(colors)) return [];
+      return colors.map((hex, i) => ({ id: `ams-${i}`, hex_color: hex }));
+    } catch { return []; }
+  }, [telemetry?.ams_colors]);
 
   const handleAddNote = async () => {
     if (!noteInput.trim() || !me) return;

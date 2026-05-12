@@ -186,7 +186,6 @@ import {
   getSessionUser, onAuthChange, logoutUser,
   loadReservations, addReservation, deleteReservation, subscribeToReservations,
   loadMaintenance, subscribeToMaintenance,
-  loadFilamentColors, subscribeToFilamentColors,
   loadPrinterTelemetry, loadPrinterCameraTelemetry, subscribeToPrinterTelemetry,
   getCameraUrl,
 } from './supabase.js';
@@ -232,7 +231,6 @@ export default function App() {
   const [adminPanelOpen, setAdminPanelOpen] = React.useState(false);
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [maintenanceMap, setMaintenanceMap] = React.useState({});
-  const [filamentColors, setFilamentColors] = React.useState([]);
   const [wsStatus, setWsStatus] = React.useState('connecting');
   const [telemetryMap, setTelemetryMap] = React.useState({});
   const [cameraTelemetryMap, setCameraTelemetryMap] = React.useState({});
@@ -345,12 +343,7 @@ export default function App() {
     return () => { channel.unsubscribe(); clearInterval(poll); };
   }, [refreshMaintenance]);
 
-  // Filament colors — chargement + realtime
-  React.useEffect(() => {
-    loadFilamentColors().then(setFilamentColors);
-    const channel = subscribeToFilamentColors(() => loadFilamentColors().then(setFilamentColors));
-    return () => channel.unsubscribe();
-  }, []);
+
 
   // Télémétrie Bambu Lab — poussée par le bridge Python
   React.useEffect(() => {
@@ -1311,12 +1304,6 @@ function RingProgress({ progress, hue, size = 72, strokeWidth = 8, label, textCo
 }
 
 function KioskPrinterCard({ printer, status, reservations, maintenance, telemetry }) {
-  const [dbColors, setDbColors] = React.useState([]);
-  React.useEffect(() => {
-    loadFilamentColors().then(cs => setDbColors(cs.filter(c => c.printer_id === printer.id)));
-  }, [printer.id]);
-
-  // Parse ams_colors — nouveau format {"colors":[...], "active":N} ou ancien format array
   const amsData = React.useMemo(() => {
     if (!telemetry?.ams_colors) return null;
     try {
@@ -1328,9 +1315,9 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
   }, [telemetry?.ams_colors]);
 
   const printerFilaments = React.useMemo(() => {
-    if (amsData) return amsData.colors.map((hex, i) => ({ id: `ams-${i}`, hex_color: hex }));
-    return dbColors;
-  }, [amsData, dbColors]);
+    if (!amsData) return [];
+    return amsData.colors.map((hex, i) => ({ id: `ams-${i}`, hex_color: hex }));
+  }, [amsData]);
 
   // Couleur du filament actif — brute puis corrigée pour fond sombre
   const activeFilamentColor = React.useMemo(() => {
