@@ -5,7 +5,7 @@ import {
   printerColor, fmtTime, fmtDuration,
 } from './data.js';
 import {
-  deleteReservationAdmin, setMaintenance, clearMaintenance, sendPrinterCommand,
+  deleteReservationAdmin, setMaintenance, clearMaintenance, sendPrinterCommand, getThumbnailUrl,
 } from './supabase.js';
 import { Icon, Btn } from './ui.jsx';
 
@@ -343,8 +343,29 @@ function PrinterControlCard({ printer, telemetry, dark, border, fg, sub, cardBg,
     setTimeout(() => setFeedback(null), 3000);
   };
 
+  const thumbnailUrl = getThumbnailUrl(printer.id, telemetry?.thumbnail_version);
+
   return (
-    <div style={{ background: cardBg, border: `0.5px solid ${border}`, borderRadius: 14, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ background: cardBg, border: `0.5px solid ${border}`, borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* Thumbnail modèle */}
+      {thumbnailUrl && isActive && (
+        <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', background: dark ? '#0a0a0a' : '#f0f0f0' }}>
+          <img
+            src={thumbnailUrl}
+            alt={`Modèle ${printer.name}`}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+          />
+          <div style={{
+            position: 'absolute', bottom: 6, left: 6,
+            background: 'rgba(0,0,0,0.6)', borderRadius: 6,
+            padding: '2px 7px', fontSize: 10, color: '#fff', fontWeight: 600,
+            maxWidth: 'calc(100% - 12px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {telemetry?.current_file?.replace(/\.gcode\.3mf$|\.gcode$|\.3mf$/i, '') || 'Impression en cours'}
+          </div>
+        </div>
+      )}
+      <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ width: 8, height: 8, borderRadius: 2, background: printerColor(printer.hue), flexShrink: 0 }} />
         <span style={{ fontWeight: 600, fontSize: 13, color: fg }}>{printer.name}</span>
@@ -378,6 +399,7 @@ function PrinterControlCard({ printer, telemetry, dark, border, fg, sub, cardBg,
           {feedback}
         </div>
       )}
+      </div>
     </div>
   );
 }

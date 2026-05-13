@@ -299,7 +299,7 @@ export function subscribeToMaintenance(onRefresh) {
 export async function loadPrinterTelemetry() {
   const { data, error } = await supabase
     .from('qp_printer_telemetry')
-    .select('printer_id,state,progress,remaining_min,current_file,layer_current,layer_total,nozzle_temp,bed_temp,chamber_temp,speed_level,error_code,current_stage,ams_colors,updated_at');
+    .select('printer_id,state,progress,remaining_min,current_file,layer_current,layer_total,nozzle_temp,bed_temp,chamber_temp,speed_level,error_code,current_stage,ams_colors,camera_version,thumbnail_version,updated_at');
   if (error) { maybeLogDbError('loadPrinterTelemetry', error); return {}; }
   return Object.fromEntries((data || []).map(r => [r.printer_id, r]));
 }
@@ -318,6 +318,14 @@ export function getCameraUrl(printerId, cameraVersion) {
     .from('qp-cameras')
     .getPublicUrl(`${printerId}/latest.jpg`);
   return `${data.publicUrl}?v=${cameraVersion}`;
+}
+
+export function getThumbnailUrl(printerId, thumbnailVersion) {
+  if (!thumbnailVersion) return null;
+  const { data } = supabase.storage
+    .from('qp-cameras')
+    .getPublicUrl(`${printerId}/thumbnail.png`);
+  return `${data.publicUrl}?v=${thumbnailVersion}`;
 }
 
 export function subscribeToPrinterTelemetry(onRefresh) {
