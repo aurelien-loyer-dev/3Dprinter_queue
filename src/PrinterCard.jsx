@@ -551,8 +551,11 @@ function ReservationBlock({ r, top, height, hue, isMine, isLive, dark, dimmed, h
   const [hover, setHover] = React.useState(false);
   const compact = density === 'compact' || height < 36;
 
-  // Créneau en cours → couleur filament ; futurs → neutre blanc/gris
-  const accentColor = isLive && liveFilamentColor ? liveFilamentColor : null;
+  const isMaintenance = r.isMaintenance === true;
+  // Maintenance → orange ; créneau actuel → filament ; futurs → neutre
+  const accentColor = isMaintenance
+    ? 'hsl(22, 72%, 58%)'
+    : isLive && liveFilamentColor ? liveFilamentColor : null;
   const neutralFg   = dark ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.72)';
   const neutralSub  = dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.42)';
   const neutralBg   = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';

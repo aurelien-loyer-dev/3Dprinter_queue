@@ -300,10 +300,33 @@ export default function App() {
     return list;
   }, [telemetryMap, reservations, elapsedMin]);
 
+  // Créneaux synthétiques pour les maintenances avec date de retour
+  const maintenanceSlots = React.useMemo(() => {
+    const list = [];
+    for (const p of PRINTERS) {
+      const maint = maintenanceMap[p.id];
+      if (!maint?.return_at) continue;
+      const returnMin = (new Date(maint.return_at).getTime() - NOW_FIXED.getTime()) / 60_000;
+      if (returnMin <= elapsedMin) continue;
+      list.push({
+        id: `maint-${p.id}`,
+        printerId: p.id,
+        login: '__maintenance__',
+        firstName: 'Maintenance',
+        lastName: '',
+        project: maint.message || 'En maintenance',
+        startMin: Math.floor(elapsedMin),
+        durationMin: Math.ceil(returnMin - elapsedMin),
+        isMaintenance: true,
+      });
+    }
+    return list;
+  }, [maintenanceMap, elapsedMin]);
+
   const reservationsForDisplay = React.useMemo(() => {
-    if (autoPrintReservations.length === 0) return reservations;
-    return [...reservations, ...autoPrintReservations].sort((a, b) => a.startMin - b.startMin);
-  }, [reservations, autoPrintReservations]);
+    const all = [...reservations, ...autoPrintReservations, ...maintenanceSlots];
+    return all.sort((a, b) => a.startMin - b.startMin);
+  }, [reservations, autoPrintReservations, maintenanceSlots]);
 
   // Session Supabase — persiste automatiquement entre les refreshs
   React.useEffect(() => {
@@ -1535,11 +1558,13 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
             const isCompact = finalHeight < 40;
             const nameFont  = isTiny ? 7.5 : isCompact ? 8.5 : 9;
             const timeFont  = isTiny ? 10 : isCompact ? 12 : 16;
-            // Créneau actuel → couleur filament ; suivants → blanc lisible
-            const blockColor  = isLive && activeFilamentColor ? activeFilamentColor : 'rgba(255,255,255,0.75)';
-            const borderColor = isLive && activeFilamentColor ? activeFilamentColor : 'rgba(255,255,255,0.30)';
-            const bgColor     = isLive && activeFilamentColor
-              ? `color-mix(in srgb, ${activeFilamentColor} 22%, transparent)`
+            // Maintenance → orange ; actuel → filament ; suivants → blanc
+            const isMaint     = r.isMaintenance === true;
+            const slotAccent  = isMaint ? 'hsl(22, 72%, 64%)' : (isLive && activeFilamentColor ? activeFilamentColor : null);
+            const blockColor  = slotAccent ?? 'rgba(255,255,255,0.75)';
+            const borderColor = slotAccent ?? 'rgba(255,255,255,0.30)';
+            const bgColor     = slotAccent
+              ? `color-mix(in srgb, ${slotAccent} 22%, transparent)`
               : 'rgba(255,255,255,0.05)';
             return (
               <div key={r.id} style={{

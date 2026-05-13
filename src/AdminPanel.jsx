@@ -5,7 +5,7 @@ import {
   printerColor, fmtTime, fmtDuration,
 } from './data.js';
 import {
-  deleteReservationAdmin, setMaintenance, clearMaintenance, sendPrinterCommand, getThumbnailUrl,
+  deleteReservationAdmin, setMaintenance, clearMaintenance, sendPrinterCommand, getCameraUrl,
 } from './supabase.js';
 import { Icon, Btn } from './ui.jsx';
 
@@ -199,7 +199,9 @@ function MaintenanceCard({ printer, maintenance, me, onRefresh, dark, border, fg
   const handleSet = async () => {
     if (!message.trim()) return;
     setLoading(true);
-    await setMaintenance(printer.id, message.trim(), returnAt || null, me);
+    // datetime-local donne l'heure locale sans fuseau → convertir en UTC ISO
+    const returnAtUTC = returnAt ? new Date(returnAt).toISOString() : null;
+    await setMaintenance(printer.id, message.trim(), returnAtUTC, me);
     onRefresh?.();
     setExpanded(false);
     setMessage('');
@@ -343,26 +345,34 @@ function PrinterControlCard({ printer, telemetry, dark, border, fg, sub, cardBg,
     setTimeout(() => setFeedback(null), 3000);
   };
 
-  const thumbnailUrl = getThumbnailUrl(printer.id, telemetry?.thumbnail_version);
+  const cameraUrl = getCameraUrl(printer.id, telemetry?.camera_version);
 
   return (
     <div style={{ background: cardBg, border: `0.5px solid ${border}`, borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 0 }}>
-      {/* Thumbnail modèle */}
-      {thumbnailUrl && isActive && (
-        <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', background: dark ? '#0a0a0a' : '#f0f0f0' }}>
-          <img
-            src={thumbnailUrl}
-            alt={`Modèle ${printer.name}`}
-            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-          />
-          <div style={{
-            position: 'absolute', bottom: 6, left: 6,
-            background: 'rgba(0,0,0,0.6)', borderRadius: 6,
-            padding: '2px 7px', fontSize: 10, color: '#fff', fontWeight: 600,
-            maxWidth: 'calc(100% - 12px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {telemetry?.current_file?.replace(/\.gcode\.3mf$|\.gcode$|\.3mf$/i, '') || 'Impression en cours'}
-          </div>
+      {/* Aperçu caméra */}
+      {isActive && (
+        <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', background: '#0a0a0a' }}>
+          {cameraUrl ? (
+            <img
+              src={cameraUrl}
+              alt={`Caméra ${printer.name}`}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>
+              Caméra indisponible
+            </div>
+          )}
+          {telemetry?.current_file && (
+            <div style={{
+              position: 'absolute', bottom: 6, left: 6,
+              background: 'rgba(0,0,0,0.65)', borderRadius: 6,
+              padding: '2px 7px', fontSize: 10, color: '#fff', fontWeight: 600,
+              maxWidth: 'calc(100% - 12px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {telemetry.current_file.replace(/\.gcode\.3mf$|\.gcode$|\.3mf$/i, '')}
+            </div>
+          )}
         </div>
       )}
       <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
