@@ -621,13 +621,22 @@ def main():
     print(f"\nPoll toutes les {POLL}s - Ctrl+C pour arrêter\n")
     time.sleep(8)
 
+    # Un seul poll_one en vol par imprimante à la fois : une FTPS thumbnail
+    # fetch ou un is_printer_reachable lents peuvent dépasser POLL, et démarrer
+    # un second thread sur la même imprimante ferait courir deux poll_one en
+    # parallèle sur la même connexion MQTT (double comptage des échecs,
+    # déconnexions/reconnexions en boucle).
+    running: dict[str, threading.Thread] = {}
+
     while True:
-        threads = [
-            threading.Thread(target=poll_one, args=(cfg, conns, failures, connecting, lock), daemon=True)
-            for cfg in PRINTERS_CONFIG
-        ]
-        for t in threads: t.start()
-        for t in threads: t.join(timeout=POLL - 0.5)
+        for cfg in PRINTERS_CONFIG:
+            pid = cfg["id"]
+            prev = running.get(pid)
+            if prev is not None and prev.is_alive():
+                continue
+            t = threading.Thread(target=poll_one, args=(cfg, conns, failures, connecting, lock), daemon=True)
+            t.start()
+            running[pid] = t
 
         execute_commands(conns)
         print()
