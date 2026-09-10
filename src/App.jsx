@@ -23,6 +23,20 @@ function normalizeRemainingMinutes(tel) {
   return Math.max(1, Math.round(raw));
 }
 
+// Les refresh realtime (postgres_changes) peuvent se déclencher plus vite que
+// l'aller-retour réseau du fetch qu'ils lancent. Sans garde, une requête plus
+// ancienne qui résout après une plus récente écrase des données fraîches avec
+// des données obsolètes — visible côté UI comme une progression qui recule
+// puis "rattrape" son retard. On ignore toute résolution qui n'est plus la
+// dernière requête émise.
+function latestOnly(setter) {
+  let seq = 0;
+  return (promise) => {
+    const id = ++seq;
+    return promise.then(data => { if (id === seq) setter(data); return data; });
+  };
+}
+
 const kioskChipStyle = {
   fontSize: 10, fontVariantNumeric: 'tabular-nums', fontWeight: 600,
   padding: '2px 6px', borderRadius: 5,
@@ -236,8 +250,17 @@ export default function App() {
   const [cameraTelemetryMap, setCameraTelemetryMap] = React.useState({});
   const [cameraFocusId, setCameraFocusId] = React.useState(null);
 
-  const isPublicCameraRoute = !isKiosk && pathname === CAMERA_PATH;
-  const activeView = !isKiosk && pathname === CAMERA_PATH ? 'camera' : t.view;
+  // cf. latestOnly() — protège chaque flux contre les résolutions réseau désordonnées
+  const applyReservations = React.useRef(latestOnly(setReservations)).current;
+  const applyMaintenance = React.useRef(latestOnly(rows =>
+    setMaintenanceMap(Object.fromEntries(rows.map(r => [r.printer_id, r]))))).current;
+  const applyTelemetry = React.useRef(latestOnly(setTelemetryMap)).current;
+  const applyCameraTelemetry = React.useRef(latestOnly(setCameraTelemetryMap)).current;
+
+  // pathname.replace: '/camera' et '/camera/' doivent tous deux ouvrir la vue
+  // publique — un hébergeur statique ou un lien externe ajoute souvent le slash.
+  const isPublicCameraRoute = !isKiosk && pathname.replace(/\/$/, '') === CAMERA_PATH;
+  const activeView = isPublicCameraRoute ? 'camera' : t.view;
   const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
 
   React.useEffect(() => {
@@ -336,13 +359,14 @@ export default function App() {
 
   // Chargement réservations + realtime WebSocket
   React.useEffect(() => {
-    loadReservations().then(data => { setReservations(data); setLoadingReservations(false); });
+    const refresh = () => applyReservations(loadReservations());
+    refresh().then(() => setLoadingReservations(false));
     const channel = subscribeToReservations(
-      () => { loadReservations().then(setReservations); },
+      refresh,
       (status) => {
         if (status === 'SUBSCRIBED') {
           setWsStatus('connected');
-          loadReservations().then(setReservations);
+          refresh();
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           setWsStatus('error');
         } else {
@@ -354,10 +378,7 @@ export default function App() {
   }, []);
 
   // Maintenance — chargement + realtime + polling fallback
-  const refreshMaintenance = React.useCallback(() =>
-    loadMaintenance().then(rows =>
-      setMaintenanceMap(Object.fromEntries(rows.map(r => [r.printer_id, r])))
-    ), []);
+  const refreshMaintenance = React.useCallback(() => applyMaintenance(loadMaintenance()), []);
 
   React.useEffect(() => {
     refreshMaintenance();
@@ -370,7 +391,7 @@ export default function App() {
 
   // Télémétrie Bambu Lab — poussée par le bridge Python
   React.useEffect(() => {
-    const refresh = () => loadPrinterTelemetry().then(setTelemetryMap);
+    const refresh = () => applyTelemetry(loadPrinterTelemetry());
     refresh();
     const channel = subscribeToPrinterTelemetry(refresh);
     return () => channel.unsubscribe();
@@ -381,7 +402,7 @@ export default function App() {
       setCameraTelemetryMap({});
       return;
     }
-    const refresh = () => loadPrinterCameraTelemetry().then(setCameraTelemetryMap);
+    const refresh = () => applyCameraTelemetry(loadPrinterCameraTelemetry());
     refresh();
     const channel = subscribeToPrinterTelemetry(refresh);
     return () => channel.unsubscribe();
@@ -395,7 +416,7 @@ export default function App() {
 
   React.useEffect(() => {
     if (!isKiosk) return;
-    const poll = setInterval(() => loadReservations().then(setReservations), 15_000);
+    const poll = setInterval(() => applyReservations(loadReservations()), 15_000);
     return () => clearInterval(poll);
   }, []);
 
@@ -585,8 +606,7 @@ export default function App() {
     if (!window.confirm(`Supprimer toutes les réservations (${allReservations.length}) ?`)) return;
 
     await Promise.all(allReservations.map(r => deleteReservation(r.id)));
-    const refreshed = await loadReservations();
-    setReservations(refreshed);
+    await applyReservations(loadReservations());
     setNotif({
       title: 'Réservations supprimées',
       message: 'Toutes les réservations ont été effacées.',

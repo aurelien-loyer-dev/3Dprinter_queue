@@ -4,4 +4,9 @@ dist/
 .env.local
 .env.*.local
 .DS_Store
-bridge
+bridge/config.py
+bridge/__pycache__/
+bridge/venv/
+__pycache__/
+.claude
+CLAUDE.md
