@@ -1,4 +1,4 @@
--- QueuePrint — SQL Editor Supabase
+-- QueuePrint - SQL Editor Supabase
 -- Version idempotente : safe à relancer même si les tables existent déjà.
 
 -- ── Réservations ──────────────────────────────────────────────────────────────
@@ -147,9 +147,9 @@ alter table qp_printer_commands enable row level security;
 
 drop policy if exists "insert printer commands" on qp_printer_commands;
 create policy "insert printer commands" on qp_printer_commands for insert with check (true);
--- Lecture/mise à jour réservées à la clé service_role (bridge) — pas de policy select/update publique
+-- Lecture/mise à jour réservées à la clé service_role (bridge) - pas de policy select/update publique
 
--- ── Storage — snapshots caméra + miniatures d'impression ──────────────────────
+-- ── Storage - snapshots caméra + miniatures d'impression ──────────────────────
 
 insert into storage.buckets (id, name, public)
 values ('qp-cameras', 'qp-cameras', true)

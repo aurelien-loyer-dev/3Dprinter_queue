@@ -1,4 +1,4 @@
-// ReserveModal.jsx — duration-based reservation flow
+// ReserveModal.jsx - duration-based reservation flow
 import React from 'react';
 import {
   PRINTERS,
@@ -214,7 +214,7 @@ export function ReserveModal({ open, onClose, onConfirm, defaultPrinterId, reser
                 display: 'flex', alignItems: 'center', gap: 8,
               }}>
                 <Icon name="clock" size={13} />
-                Aucun créneau libre maintenant — prochain disponible {fmtRelativeFuture(candidates[0])}
+                Aucun créneau libre maintenant - prochain disponible {fmtRelativeFuture(candidates[0])}
               </div>
             )}
 

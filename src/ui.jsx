@@ -1,4 +1,4 @@
-// ui.jsx — small primitives (icons, avatar, status pill, buttons)
+// ui.jsx - small primitives (icons, avatar, status pill, buttons)
 import React from 'react';
 
 export function Icon({ name, size = 16, color = 'currentColor', stroke = 1.6, style }) {

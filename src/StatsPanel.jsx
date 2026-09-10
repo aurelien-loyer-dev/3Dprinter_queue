@@ -1,4 +1,4 @@
-// StatsPanel.jsx — statistiques globales de l'atelier
+// StatsPanel.jsx - statistiques globales de l'atelier
 import React from 'react';
 import { PRINTERS, minToDate, fmtDuration, printerColor } from './data.js';
 import { Icon } from './ui.jsx';

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-TEK3D — Bambu Lab Bridge
+TEK3D - Bambu Lab Bridge
 Lit l'état des imprimantes via MQTT et pousse les données vers Supabase.
 Lancement : source venv/bin/activate && python printer_bridge.py
 """
@@ -29,7 +29,7 @@ sys.stderr = _Q(sys.stderr)
 
 POLL = 2
 
-# Printers récemment arrêtés manuellement — on ignore l'état Bambu pendant 20s
+# Printers récemment arrêtés manuellement - on ignore l'état Bambu pendant 20s
 _stop_grace: dict[str, float] = {}
 STOP_GRACE_SEC = 20
 
@@ -53,7 +53,7 @@ def test_supabase() -> bool:
             timeout=5,
         )
         if r.status_code == 404:
-            print("  ✗ Table qp_printer_telemetry introuvable — exécute le SQL dans Supabase")
+            print("  ✗ Table qp_printer_telemetry introuvable - exécute le SQL dans Supabase")
             return False
         if not r.ok:
             print(f"  ✗ Supabase erreur {r.status_code}: {r.text}")
@@ -179,7 +179,7 @@ def get_ams_data(p: bl.Printer) -> dict | None:
     Retourne None si le hub est introuvable (MQTT pas encore prêt → ne pas toucher la DB).
     """
     hub_found = False
-    # tray_id global (ams_id*4 + tray_id local) → couleur — garde le vrai numéro
+    # tray_id global (ams_id*4 + tray_id local) → couleur - garde le vrai numéro
     # de slot pour ne pas désaligner l'index quand un slot vide est sauté.
     tray_colors: dict[int, str] = {}
     try:
@@ -390,7 +390,7 @@ def read_printer(p: bl.Printer, printer_id: str = "", printer_ip: str = "", acce
             pass
 
         try:
-            raw = p.get_time()  # mc_remaining_time — déjà en minutes
+            raw = p.get_time()  # mc_remaining_time - déjà en minutes
             if raw is not None:
                 v = float(raw)
                 data["remaining_min"] = max(0, int(v)) if v > 0 else None
@@ -415,7 +415,7 @@ def read_printer(p: bl.Printer, printer_id: str = "", printer_ip: str = "", acce
             try: data["layer_total"] = int(total)
             except (TypeError, ValueError): pass
 
-    # Températures (toujours lire, même idle — la buse refroidit après impression)
+    # Températures (toujours lire, même idle - la buse refroidit après impression)
     nozzle  = _temp(p, "get_nozzle_temperature")
     bed     = _temp(p, "get_bed_temperature")
     chamber = _temp(p, "get_chamber_temperature")
@@ -423,7 +423,7 @@ def read_printer(p: bl.Printer, printer_id: str = "", printer_ip: str = "", acce
     if bed     is not None: data["bed_temp"]     = bed
     if chamber is not None: data["chamber_temp"] = chamber
 
-    # Erreur — et correction du state selon le code erreur
+    # Erreur - et correction du state selon le code erreur
     # Si l'impression est en cours ou en pause sans erreur, on efface le code résiduel
     if state in ("printing", "paused"):
         data["error_code"] = None
@@ -440,7 +440,7 @@ def read_printer(p: bl.Printer, printer_id: str = "", printer_ip: str = "", acce
     # Codes Bambu Lab correspondant à une annulation propre par l'utilisateur
     CANCEL_CODES = {
         0,          # pas d'erreur
-        50348044,   # 0x0300400C — stopped by user
+        50348044,   # 0x0300400C - stopped by user
     }
 
     if err_int is not None:
@@ -448,7 +448,7 @@ def read_printer(p: bl.Printer, printer_id: str = "", printer_ip: str = "", acce
         # PAUSE + code erreur réel = vrai problème (bourrage, runout…)
         if state == "paused" and not is_cancel:
             data["state"] = "error"
-        # FAILED/error + annulation = idle — on nettoie tous les champs de l'impression
+        # FAILED/error + annulation = idle - on nettoie tous les champs de l'impression
         elif state == "error" and is_cancel:
             data["state"] = "idle"
             for key in ("error_code", "progress", "remaining_min",
@@ -482,7 +482,7 @@ def connect_printer(cfg: dict) -> bl.Printer | None:
         p.connect()
         return p
     except Exception as e:
-        print(f"  ✗  {cfg['name']} — {e}")
+        print(f"  ✗  {cfg['name']} - {e}")
         return None
 
 
@@ -618,7 +618,7 @@ def main():
     for t in init_threads:
         t.join()
 
-    print(f"\nPoll toutes les {POLL}s — Ctrl+C pour arrêter\n")
+    print(f"\nPoll toutes les {POLL}s - Ctrl+C pour arrêter\n")
     time.sleep(8)
 
     while True:

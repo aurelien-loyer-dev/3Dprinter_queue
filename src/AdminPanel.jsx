@@ -1,4 +1,4 @@
-// AdminPanel.jsx — Admin dashboard
+// AdminPanel.jsx - Admin dashboard
 import React from 'react';
 import {
   PRINTERS,
@@ -381,7 +381,7 @@ function PrinterControlCard({ printer, telemetry, dark, border, fg, sub, cardBg,
         <span style={{ fontWeight: 600, fontSize: 13, color: fg }}>{printer.name}</span>
       </div>
       <div style={{ fontSize: 12, color: stateColor, fontWeight: 500 }}>
-        {stateLabel}{isPrinting && telemetry?.progress != null && ` — ${telemetry.progress}%`}
+        {stateLabel}{isPrinting && telemetry?.progress != null && ` - ${telemetry.progress}%`}
       </div>
       {isActive ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

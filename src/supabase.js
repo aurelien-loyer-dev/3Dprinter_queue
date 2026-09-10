@@ -1,4 +1,4 @@
-// supabase.js — client + auth (Supabase Auth) + DB
+// supabase.js - client + auth (Supabase Auth) + DB
 import { createClient } from '@supabase/supabase-js';
 import { NOW_FIXED } from './data.js';
 
@@ -10,7 +10,7 @@ export const supabase = createClient(
 function maybeLogDbError(label, error) {
   if (!error) return;
   const msg = (error && error.message) ? error.message : String(error);
-  if (msg.includes('Could not find the table')) return; // supabase schema cache missing table — ignore
+  if (msg.includes('Could not find the table')) return; // supabase schema cache missing table - ignore
   console.error(`${label}:`, msg);
 }
 
@@ -87,7 +87,7 @@ export async function sendPrinterCommand(printerId, command) {
   return true;
 }
 
-// ── Register — envoie juste le code, le compte est créé après vérification ──
+// ── Register - envoie juste le code, le compte est créé après vérification ──
 
 export async function registerUser(login, password) {
   if (!login.endsWith('@epitech.eu')) return { error: 'Utilise ton adresse @epitech.eu' };
@@ -199,7 +199,7 @@ export function subscribeToReservations(onRefresh, onStatus) {
     .subscribe(onStatus ?? (() => {}));
 }
 
-// ── Admin — Filament colors ────────────────────────────────────────────────
+// ── Admin - Filament colors ────────────────────────────────────────────────
 
 export async function loadFilamentColors() {
   const { data, error } = await supabase
@@ -354,7 +354,7 @@ export function subscribeToPrinterTelemetry(onRefresh) {
     } catch (e) {
       // In some dev/HMR scenarios the client returns an already-subscribed channel
       // and calling `.on` will throw. Fall back to polling to keep UI functional.
-      console.warn('subscribeToPrinterTelemetry: realtime channel setup failed, falling back to polling —', e.message);
+      console.warn('subscribeToPrinterTelemetry: realtime channel setup failed, falling back to polling -', e.message);
       if (!registry.pollers) registry.pollers = new Map();
       const id = setInterval(() => registry.callbacks.forEach(cb => { try { cb(); } catch {} }), 15_000);
       registry.pollers.set(name, id);

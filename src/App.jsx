@@ -1,4 +1,4 @@
-// App.jsx — main shell
+// App.jsx - main shell
 import React from 'react';
 // Fusionne le statut basé sur les réservations avec la télémétrie réelle du bridge
 function mergePrinterStatus(resStatus, tel) {
@@ -26,7 +26,7 @@ function normalizeRemainingMinutes(tel) {
 // Les refresh realtime (postgres_changes) peuvent se déclencher plus vite que
 // l'aller-retour réseau du fetch qu'ils lancent. Sans garde, une requête plus
 // ancienne qui résout après une plus récente écrase des données fraîches avec
-// des données obsolètes — visible côté UI comme une progression qui recule
+// des données obsolètes - visible côté UI comme une progression qui recule
 // puis "rattrape" son retard. On ignore toute résolution qui n'est plus la
 // dernière requête émise.
 function latestOnly(setter) {
@@ -250,7 +250,7 @@ export default function App() {
   const [cameraTelemetryMap, setCameraTelemetryMap] = React.useState({});
   const [cameraFocusId, setCameraFocusId] = React.useState(null);
 
-  // cf. latestOnly() — protège chaque flux contre les résolutions réseau désordonnées
+  // cf. latestOnly() - protège chaque flux contre les résolutions réseau désordonnées
   const applyReservations = React.useRef(latestOnly(setReservations)).current;
   const applyMaintenance = React.useRef(latestOnly(rows =>
     setMaintenanceMap(Object.fromEntries(rows.map(r => [r.printer_id, r]))))).current;
@@ -258,7 +258,7 @@ export default function App() {
   const applyCameraTelemetry = React.useRef(latestOnly(setCameraTelemetryMap)).current;
 
   // pathname.replace: '/camera' et '/camera/' doivent tous deux ouvrir la vue
-  // publique — un hébergeur statique ou un lien externe ajoute souvent le slash.
+  // publique - un hébergeur statique ou un lien externe ajoute souvent le slash.
   const isPublicCameraRoute = !isKiosk && pathname.replace(/\/$/, '') === CAMERA_PATH;
   const activeView = isPublicCameraRoute ? 'camera' : t.view;
   const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
@@ -351,7 +351,7 @@ export default function App() {
     return all.sort((a, b) => a.startMin - b.startMin);
   }, [reservations, autoPrintReservations, maintenanceSlots]);
 
-  // Session Supabase — persiste automatiquement entre les refreshs
+  // Session Supabase - persiste automatiquement entre les refreshs
   React.useEffect(() => {
     getSessionUser().then(user => { setMe(user); setAuthLoading(false); });
     return onAuthChange(user => { setMe(user); setAuthLoading(false); });
@@ -377,7 +377,7 @@ export default function App() {
     return () => channel.unsubscribe();
   }, []);
 
-  // Maintenance — chargement + realtime + polling fallback
+  // Maintenance - chargement + realtime + polling fallback
   const refreshMaintenance = React.useCallback(() => applyMaintenance(loadMaintenance()), []);
 
   React.useEffect(() => {
@@ -389,7 +389,7 @@ export default function App() {
 
 
 
-  // Télémétrie Bambu Lab — poussée par le bridge Python
+  // Télémétrie Bambu Lab - poussée par le bridge Python
   React.useEffect(() => {
     const refresh = () => applyTelemetry(loadPrinterTelemetry());
     refresh();
@@ -420,7 +420,7 @@ export default function App() {
     return () => clearInterval(poll);
   }, []);
 
-  // Notifications push — alerte 10 min avant chaque créneau
+  // Notifications push - alerte 10 min avant chaque créneau
   React.useEffect(() => {
     if (!me || !('Notification' in window)) return;
 
@@ -436,7 +436,7 @@ export default function App() {
         return setTimeout(() => {
           if (Notification.permission === 'granted') {
             const printer = printerById(r.printerId);
-            new Notification('TEK3D — Créneau dans 10 min 🖨', {
+            new Notification('TEK3D - Créneau dans 10 min 🖨', {
               body: `${printer.name} · ${r.project} · ${fmtTime(r.startMin)}`,
               icon: '/favicon.ico',
             });
@@ -1212,17 +1212,17 @@ function KioskView({ reservations, loading, maintenanceMap = {}, wsStatus = 'con
         background: '#0f0f0f', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
         display: 'flex', alignItems: 'center',
       }}>
-        {/* WS status — gauche */}
+        {/* WS status - gauche */}
         <WsIndicator status={wsStatus} />
 
-        {/* Heure — centre */}
+        {/* Heure - centre */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
           <div style={{ fontSize: 52, fontWeight: 700, letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
             {now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
           </div>
         </div>
 
-        {/* Date — droite */}
+        {/* Date - droite */}
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', textTransform: 'capitalize', textAlign: 'right' }}>
           {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </div>
@@ -1362,7 +1362,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
     return amsData.colors.map((hex, i) => ({ id: `ams-${i}`, hex_color: hex }));
   }, [amsData]);
 
-  // Couleur du filament actif — brute puis corrigée pour fond sombre
+  // Couleur du filament actif - brute puis corrigée pour fond sombre
   const activeFilamentColor = React.useMemo(() => {
     if (!amsData) return null;
     const { colors, active } = amsData;
@@ -1531,7 +1531,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
             <div style={{ fontSize: 20, fontWeight: 800, color: 'hsl(145, 68%, 60%)' }}>Disponible</div>
           </div>
         )}
-        {/* Filaments chargés sur l'AMS — pas de nom transmis par l'imprimante, juste la couleur */}
+        {/* Filaments chargés sur l'AMS - pas de nom transmis par l'imprimante, juste la couleur */}
         {printerFilaments.length > 0 && (
           <div style={{ marginTop: 10 }}>
             <div style={{ fontSize: 9.5, color: sub, marginBottom: 5, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
@@ -1570,7 +1570,7 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
             );
           })}
 
-          {/* Blocs de réservation — hauteur proportionnelle à la durée */}
+          {/* Blocs de réservation - hauteur proportionnelle à la durée */}
             {windowItems.map(r => {
             const visStart  = Math.max(r.startMin, elapsedMin);
             const visEnd    = Math.min(r.startMin + r.durationMin, elapsedMin + windowMin);

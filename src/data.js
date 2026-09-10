@@ -1,4 +1,4 @@
-// data.js — données statiques + helpers métier
+// data.js - données statiques + helpers métier
 // Toute la logique DB est dans supabase.js.
 
 export const PRINTERS = [
@@ -23,7 +23,7 @@ export function getNextSlotOffset(slotSize = 30) {
 const SOON_MIN = 30;
 
 export function computePrinterStatus(reservations, printerId) {
-  // Temps écoulé depuis NOW_FIXED en minutes — se met à jour à chaque appel
+  // Temps écoulé depuis NOW_FIXED en minutes - se met à jour à chaque appel
   const elapsedMin = (Date.now() - NOW_FIXED.getTime()) / 60_000;
 
   const currentJob = reservations.find(r =>
@@ -34,7 +34,7 @@ export function computePrinterStatus(reservations, printerId) {
 
   if (currentJob) {
     // There is a reservation covering the current time. Do not claim the printer is
-    // "printing" just because a slot exists — telemetry controls that. Show
+    // "printing" just because a slot exists - telemetry controls that. Show
     // a dedicated 'reserved' state so the UI displays "Réservé" when idle but
     // booked. Progress is unknown until telemetry reports activity.
     const etaMin = currentJob.startMin + currentJob.durationMin - elapsedMin;
@@ -76,7 +76,7 @@ export function fmtTimeRound(min) {
 }
 
 export function fmtDuration(min) {
-  if (min == null || isNaN(min) || min < 0) return '—';
+  if (min == null || isNaN(min) || min < 0) return '-';
   const h = Math.floor(min / 60);
   const m = min % 60;
   if (h && m) return `${h}h${String(m).padStart(2, '0')}`;
@@ -96,7 +96,7 @@ export function fmtDayLabel(min) {
 }
 
 export function fmtRelativeFuture(min) {
-  if (min == null || isNaN(min)) return '—';
+  if (min == null || isNaN(min)) return '-';
   min = Math.round(min * 100) / 100;
   if (min < 1)  return 'maintenant';
   if (min < 60) return `${Math.round(min)}min`;

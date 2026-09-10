@@ -1,4 +1,4 @@
-// TweaksPanel.jsx — floating tweaks panel + form controls
+// TweaksPanel.jsx - floating tweaks panel + form controls
 import React from 'react';
 
 const __TWEAKS_STYLE = `

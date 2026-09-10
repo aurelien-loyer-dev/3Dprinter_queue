@@ -1,4 +1,4 @@
-// PrinterCard.jsx — single printer column in the dashboard
+// PrinterCard.jsx - single printer column in the dashboard
 import React from 'react';
 
 function swatchBorder(hex) {
@@ -377,7 +377,7 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
           </Btn>
         ) : (
           <Btn variant="primary" size="sm" full icon="plus" onClick={() => onReserve(printer.id)}>
-            Réserver — prochain {fmtTime(nextStart)}
+            Réserver - prochain {fmtTime(nextStart)}
           </Btn>
         )}
       </div>

@@ -1,4 +1,4 @@
-// screens.jsx — Auth + panels
+// screens.jsx - Auth + panels
 import React from 'react';
 import { loginUser, registerUser, verifyOtpAndSignUp } from './supabase.js';
 import {

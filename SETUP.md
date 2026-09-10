@@ -1,4 +1,4 @@
-# Tek3D — Setup
+# Tek3D - Setup
 
 Planning de réservation pour les imprimantes 3D Bambu Lab de l'Epitech makerspace.
 Deux parties indépendantes à mettre en route : le **frontend** (React/Vite + Supabase) et,
@@ -15,7 +15,7 @@ si tu as accès aux imprimantes physiques, le **bridge Python** qui les pilote.
 
 1. Créer un projet sur https://supabase.com
 2. **Settings → API** → noter le **Project URL** et la clé **anon/public**
-3. **Settings → API** → noter aussi la clé **service_role** (secrète, pour le bridge uniquement — voir §4)
+3. **Settings → API** → noter aussi la clé **service_role** (secrète, pour le bridge uniquement - voir §4)
 4. **SQL Editor** → nouvelle query → coller tout `supabase-schema.sql` → **Run**
    - Le script est idempotent (relançable sans risque) et crée :
      - `qp_reservations`, `qp_filament_colors`, `qp_printer_telemetry`, `qp_printer_notes`, `qp_maintenance`, `qp_printer_commands`
@@ -23,7 +23,7 @@ si tu as accès aux imprimantes physiques, le **bridge Python** qui les pilote.
      - l'activation Realtime (`postgres_changes`) sur les tables qui en ont besoin
    - Vérifier dans **Table Editor** que les 6 tables existent, et dans **Storage** que `qp-cameras` est présent
 5. **Edge Functions** → créer une fonction nommée `bright-action` (envoi + vérification du code OTP par email).
-   Ce repo n'en contient pas le code source — elle vit uniquement dans le projet Supabase. Elle doit :
+   Ce repo n'en contient pas le code source - elle vit uniquement dans le projet Supabase. Elle doit :
    - accepter `POST { action: "send", email }` → générer/envoyer un code OTP à `email`, en rejetant tout ce qui n'est pas `@epitech.eu`
    - accepter `POST { action: "verify", email, code }` → valider le code et répondre `ok` (ou une erreur JSON `{ error }` sinon)
    - `src/supabase.js` l'appelle avec le header `Authorization: Bearer <anon key>` (voir `callOtp()`)
@@ -58,15 +58,15 @@ L'accès admin n'est pas un rôle en base : c'est un email codé en dur (`ADMIN_
 
 ### Ajouter/retirer une imprimante
 
-La liste des imprimantes est statique dans `src/data.js` (`PRINTERS`) — pas de table dédiée en base. Chaque entrée a un `id` (doit correspondre à celui utilisé côté bridge, voir §4), un `name`, un `model` et un `hue` (couleur d'accent UI).
+La liste des imprimantes est statique dans `src/data.js` (`PRINTERS`) - pas de table dédiée en base. Chaque entrée a un `id` (doit correspondre à celui utilisé côté bridge, voir §4), un `name`, un `model` et un `hue` (couleur d'accent UI).
 
 ## 3. Tester sans les imprimantes physiques
 
-Sans bridge lancé, `qp_printer_telemetry` reste vide : les imprimantes s'affichent comme si elles n'avaient jamais transmis d'état (pas de progression, pas de température). Le planning de réservations, l'auth, les notes et la maintenance fonctionnent normalement sans le bridge — seule la télémétrie/caméra live en dépend.
+Sans bridge lancé, `qp_printer_telemetry` reste vide : les imprimantes s'affichent comme si elles n'avaient jamais transmis d'état (pas de progression, pas de température). Le planning de réservations, l'auth, les notes et la maintenance fonctionnent normalement sans le bridge - seule la télémétrie/caméra live en dépend.
 
 ## 4. Bridge Python (imprimantes Bambu Lab)
 
-Process séparé, indépendant du build Vite. Il poll chaque imprimante en MQTT toutes les 2s, normalise son état, et pousse tout dans Supabase avec la clé **service_role** (elle bypass le RLS — ne jamais l'utiliser côté frontend).
+Process séparé, indépendant du build Vite. Il poll chaque imprimante en MQTT toutes les 2s, normalise son état, et pousse tout dans Supabase avec la clé **service_role** (elle bypass le RLS - ne jamais l'utiliser côté frontend).
 
 ```bash
 cd bridge
@@ -75,7 +75,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Créer `bridge/config.py` (gitignored — ne jamais le commit) sur ce modèle :
+Créer `bridge/config.py` (gitignored - ne jamais le commit) sur ce modèle :
 
 ```python
 SUPABASE_URL = "https://xxxxx.supabase.co"
@@ -83,7 +83,7 @@ SUPABASE_SERVICE_KEY = "eyJhbGc..."  # clé service_role, PAS la clé anon
 
 PRINTERS_CONFIG = [
     {"id": "desyre", "name": "DÉSYRÉ", "ip": "192.168.1.10", "access_code": "12345678", "serial": "AC12345678"},
-    # un dict par imprimante — "id" doit matcher l'entrée correspondante dans src/data.js
+    # un dict par imprimante - "id" doit matcher l'entrée correspondante dans src/data.js
 ]
 ```
 
