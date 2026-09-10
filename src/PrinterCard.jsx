@@ -253,10 +253,10 @@ export function PrinterCard({ printer, status, reservations, allReservations, me
 
         {filamentColors.length > 0 && (
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${border}` }}>
-            <div style={{ fontSize: 10, color: subText, marginBottom: 6, fontWeight: 500 }}>Filaments disponibles</div>
+            <div style={{ fontSize: 10, color: subText, marginBottom: 6, fontWeight: 500 }}>Filaments chargés (AMS)</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {filamentColors.map(color => (
-                <div key={color.id} title={color.color_name} style={{
+                <div key={color.id} title="Couleur chargée sur l'AMS" style={{
                   width: 28, height: 28, borderRadius: 7,
                   background: color.hex_color,
                   border: swatchBorder(color.hex_color),

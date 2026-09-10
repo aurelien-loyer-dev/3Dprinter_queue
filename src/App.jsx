@@ -1531,16 +1531,21 @@ function KioskPrinterCard({ printer, status, reservations, maintenance, telemetr
             <div style={{ fontSize: 20, fontWeight: 800, color: 'hsl(145, 68%, 60%)' }}>Disponible</div>
           </div>
         )}
-        {/* Filaments — pastilles colorées sans nom */}
+        {/* Filaments chargés sur l'AMS — pas de nom transmis par l'imprimante, juste la couleur */}
         {printerFilaments.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-            {printerFilaments.map(c => (
-              <div key={c.id} title={c.color_name} style={{
-                width: 24, height: 24, borderRadius: 6,
-                background: c.hex_color,
-                border: swatchBorder(c.hex_color),
-              }} />
-            ))}
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 9.5, color: sub, marginBottom: 5, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+              Filaments AMS
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {printerFilaments.map(c => (
+                <div key={c.id} title="Couleur chargée sur l'AMS" style={{
+                  width: 24, height: 24, borderRadius: 6,
+                  background: c.hex_color,
+                  border: swatchBorder(c.hex_color),
+                }} />
+              ))}
+            </div>
           </div>
         )}
       </div>
